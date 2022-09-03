@@ -21,7 +21,7 @@ func Eval(client opac.Client, codes []string, w io.Writer, format model.OutputFo
 		},
 	}
 
-	if err := walkCode(codes, func(path string, data *model.File) error {
+	callback := func(path string, data *model.Target) error {
 		ctx := context.Background()
 		var out model.EvalOutput
 		if err := client.Query(ctx, data, &out); err != nil {
@@ -51,7 +51,9 @@ func Eval(client opac.Client, codes []string, w io.Writer, format model.OutputFo
 			}
 		}
 		return nil
-	}); err != nil {
+	}
+
+	if err := walkCode(codes, callback); err != nil {
 		return err
 	}
 

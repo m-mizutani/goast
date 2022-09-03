@@ -1,7 +1,7 @@
 package goast
 
 fail[result] {
-    func := input.Source.Decls[_]
+    func := input.File.Decls[_]
     func.Body
     func.Name.Name != "main" # ignore func main()
 
@@ -14,10 +14,10 @@ fail[result] {
 }
 
 fail[result] {
-    func := input.Source.Decls[_]
+    func := input.File.Decls[_]
     func.Body
     func.Type.Params.List[0].Type.X.Name != "context.Context"
-    print(func)
+
     result := {
         "msg": sprintf("%s first argument must be context.Context, actual is %s",
         [func.Name.Name, func.Type.Params.List[0].Type.X.Name]),

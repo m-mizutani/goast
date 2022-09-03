@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"go/ast"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -17,7 +16,7 @@ import (
 )
 
 func createTestCode(t *testing.T, code string) string {
-	fd, err := ioutil.TempFile("", "*.go")
+	fd, err := os.CreateTemp("", "*.go")
 	require.NoError(t, err)
 	_, err = fd.WriteString(code)
 	require.NoError(t, err)
@@ -38,10 +37,16 @@ func TestEval(t *testing.T) {
 	}`)
 
 	mock := opac.NewMock(func(in any) (any, error) {
-		file, ok := in.(*model.File)
+		node, ok := in.(*model.Target)
 		require.True(t, ok)
-		require.Len(t, file.Source.Decls, 1)
-		f, ok := file.Source.Decls[0].(*ast.FuncDecl)
+		if node.Kind != "File" {
+			return nil, nil
+		}
+
+		src, ok := node.Node.(*ast.File)
+		require.True(t, ok)
+		require.Len(t, src.Decls, 1)
+		f, ok := src.Decls[0].(*ast.FuncDecl)
 		require.True(t, ok)
 
 		assert.Equal(t, "Add", f.Name.Name)
@@ -101,5 +106,26 @@ func TestEvalPolicy(t *testing.T) {
 
 	var w bytes.Buffer
 	require.NoError(t, usecase.Eval(client, []string{"../../examples/main.go"}, &w, model.OutputText))
+}
 
+func TestNestedCode(t *testing.T) {
+	codePath := createTestCode(t, `package main
+	import "fmt"
+
+	func Add(a, b int) {
+		for i := 0; i < a; i++ {
+			for j := 0; j < b; j++ {
+				fmt.Println(i * j)
+			}
+		}
+	}`)
+
+	mock := opac.NewMock(func(in any) (any, error) {
+		return &model.EvalOutput{
+			Fail: []*model.EvalFail{},
+		}, nil
+	})
+
+	var w bytes.Buffer
+	require.NoError(t, usecase.Eval(mock, []string{codePath}, &w, model.OutputJSON))
 }
