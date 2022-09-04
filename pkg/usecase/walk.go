@@ -13,7 +13,7 @@ import (
 	"github.com/m-mizutani/goerr"
 )
 
-type walkCallback func(path string, data *model.Target) error
+type walkCallback func(data *model.Target) error
 
 func walkCode(codes []string, callback walkCallback) error {
 	for _, codePath := range codes {
@@ -67,7 +67,7 @@ func walkCode(codes []string, callback walkCallback) error {
 
 				node := model.NewTarget(fpath, output, fileSet)
 
-				if err := callback(fpath, node); err != nil {
+				if err := callback(node); err != nil {
 					cbErr = err
 					return false
 				}

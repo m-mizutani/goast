@@ -14,12 +14,12 @@ import (
 )
 
 func DumpDir(codes []string, outDir string) error {
-	callback := func(codePath string, data *model.Target) error {
+	callback := func(data *model.Target) error {
 		if data.Kind != "File" {
 			return nil
 		}
 
-		codeDir := filepath.Dir(codePath)
+		codeDir := filepath.Dir(data.Path)
 		dir := filepath.Join(outDir, codeDir)
 
 		// #nosec
@@ -27,7 +27,7 @@ func DumpDir(codes []string, outDir string) error {
 			return goerr.Wrap(err)
 		}
 
-		outPath := filepath.Join(dir, filepath.Base(codePath)+".json")
+		outPath := filepath.Join(dir, filepath.Base(data.Path)+".json")
 		fd, err := os.Create(filepath.Clean(outPath))
 		if err != nil {
 			return err
@@ -89,23 +89,27 @@ func DumpWriter(codes []string, w io.Writer, options ...DumpOption) error {
 	}
 
 	if len(opt.Lines) == 0 && len(opt.FuncNames) == 0 {
-		return walkCode(codes, func(path string, data *model.Target) error {
+		return walkCode(codes, func(data *model.Target) error {
 			if data.Kind != "File" {
 				return nil
 			}
 
-			return dump(path, data)
+			return dump(data.Path, data)
 		})
 	} else {
-		return walkCode(codes, func(path string, data *model.Target) error {
+		visitedLine := map[int]struct{}{} // For avoiding to display children
+		return walkCode(codes, func(data *model.Target) error {
 			pos := data.Pos(data.Node.Pos())
 			if _, ok := opt.Lines[pos.Line]; ok {
-				return dump(path, data)
+				if _, visited := visitedLine[pos.Line]; !visited {
+					visitedLine[pos.Line] = struct{}{}
+					return dump(data.Path, data)
+				}
 			}
 
 			if decl, ok := data.Node.(*ast.FuncDecl); ok {
 				if _, ok := opt.FuncNames[decl.Name.Name]; ok {
-					return dump(path, data)
+					return dump(data.Path, data)
 				}
 			}
 

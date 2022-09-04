@@ -1,7 +1,7 @@
 package goast
 
 fail[result] {
-    func := input.File.Decls[_]
+    func := input.Node.Decls[_]
     func.Body
     func.Name.Name != "main" # ignore func main()
 
@@ -14,7 +14,7 @@ fail[result] {
 }
 
 fail[result] {
-    func := input.File.Decls[_]
+    func := input.Node.Decls[_]
     func.Body
     func.Type.Params.List[0].Type.X.Name != "context.Context"
 

@@ -23,3 +23,19 @@ func TestDumpLine(t *testing.T) {
 	var w bytes.Buffer
 	require.NoError(t, usecase.DumpWriter([]string{codePath}, &w, usecase.WithDumpLine(7)))
 }
+
+func TestStructAccess(t *testing.T) {
+	codePath := createTestCode(t, `package main
+
+	import "model"
+
+	func main() {
+		var u0 *model.User
+		u1 := &model.User{}
+		u2 := model.User{}
+	}
+	`)
+
+	var w bytes.Buffer
+	require.NoError(t, usecase.DumpWriter([]string{codePath}, &w, usecase.WithDumpLine(7)))
+}

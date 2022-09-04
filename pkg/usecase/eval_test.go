@@ -105,7 +105,7 @@ func TestEvalPolicy(t *testing.T) {
 	require.NoError(t, err)
 
 	var w bytes.Buffer
-	require.NoError(t, usecase.Eval(client, []string{"../../examples/main.go"}, &w, model.OutputText))
+	require.NoError(t, usecase.Eval(client, []string{"../../examples/basic/main.go"}, &w, model.OutputText))
 }
 
 func TestNestedCode(t *testing.T) {
