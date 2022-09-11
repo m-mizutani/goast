@@ -1,4 +1,4 @@
-# goast
+# goast [![test](https://github.com/m-mizutani/goast/actions/workflows/test.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/test.yml)[![gosec](https://github.com/m-mizutani/goast/actions/workflows/gosec.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/gosec.yml) [![trivy](https://github.com/m-mizutani/goast/actions/workflows/trivy.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/trivy.yml)
 
 Go [AST](https://pkg.go.dev/go/ast) (Abstract Syntax Tree) based static analysis tool with [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/).
 
