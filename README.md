@@ -21,7 +21,7 @@ There are a lot of static analysis tools for Go language. They inspect Go source
 ### Install
 
 ```
-$ go install github.com/m-mizutani/goast@latest
+$ go install github.com/m-mizutani/goast/cmd/goast@latest
 ```
 
 ### Dump source code to confirm AST

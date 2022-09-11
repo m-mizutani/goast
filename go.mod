@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/m-mizutani/goerr v0.1.7
+	github.com/m-mizutani/gots v0.0.0-20220805234349-298bca13897d
 	github.com/m-mizutani/opac v0.1.2-0.20220828012605-ae6cbff4c505
 	github.com/m-mizutani/zlog v0.3.2
 	github.com/reviewdog/reviewdog v0.14.1

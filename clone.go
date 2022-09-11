@@ -1,11 +1,24 @@
-package usecase
+package goast
 
 import (
 	"go/ast"
 	"reflect"
 )
 
-func clone(value reflect.Value) reflect.Value {
+type cloneContext struct {
+	objectDepth int
+}
+
+func newCloneContext() *cloneContext {
+	return &cloneContext{}
+}
+
+func copyCloneContext(ctx *cloneContext) *cloneContext {
+	newCtx := *ctx
+	return &newCtx
+}
+
+func clone(ctx *cloneContext, value reflect.Value) reflect.Value {
 	adjustValue := func(ret reflect.Value) reflect.Value {
 		switch value.Kind() {
 		case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Array:
@@ -39,17 +52,23 @@ func clone(value reflect.Value) reflect.Value {
 
 			objType := reflect.TypeOf(&ast.Object{})
 
+			newCtx := copyCloneContext(ctx)
 			if fv.Type() == objType {
-				empty := reflect.New(fv.Type())
-				dst.Elem().Field(i).Set(empty.Elem())
-				continue
+				if newCtx.objectDepth <= 0 {
+					empty := reflect.New(fv.Type())
+					dst.Elem().Field(i).Set(empty.Elem())
+					continue
+				} else {
+					newCtx.objectDepth--
+				}
 			}
 
 			if !fv.CanInterface() {
 				continue
 			}
 
-			dst.Elem().Field(i).Set(clone(fv))
+			v := clone(newCtx, fv)
+			dst.Elem().Field(i).Set(v)
 		}
 
 	case reflect.Map:
@@ -57,21 +76,21 @@ func clone(value reflect.Value) reflect.Value {
 		keys := src.MapKeys()
 		for i := 0; i < src.Len(); i++ {
 			mValue := src.MapIndex(keys[i])
-			dst.SetMapIndex(keys[i], clone(mValue))
+			dst.SetMapIndex(keys[i], clone(ctx, mValue))
 		}
 
 	case reflect.Array, reflect.Slice:
 		dst = reflect.MakeSlice(src.Type(), src.Len(), src.Cap())
 		for i := 0; i < src.Len(); i++ {
 			srcValue := src.Index(i)
-			newValue := clone(srcValue)
+			newValue := clone(ctx, srcValue)
 			dst.Index(i).Set(newValue)
 		}
 
 	case reflect.Interface:
 		dst = reflect.New(src.Type())
 		if !src.IsNil() {
-			dst.Elem().Set(clone(src.Elem()))
+			dst.Elem().Set(clone(ctx, src.Elem()))
 		}
 
 	default:
