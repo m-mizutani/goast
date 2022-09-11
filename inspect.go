@@ -24,7 +24,7 @@ type inspectOptions struct {
 	FuncNames   map[string]struct{}
 	ObjectDepth int
 	AllMatched  bool
-	Walk        bool
+	RootOnly    bool
 
 	viewedLine map[int]struct{}
 }
@@ -70,9 +70,9 @@ func WithObjectDepth(depth int) InspectOption {
 	}
 }
 
-func WithWalk() InspectOption {
+func WithRootOnly() InspectOption {
 	return func(opt *inspectOptions) {
-		opt.Walk = true
+		opt.RootOnly = true
 	}
 }
 
@@ -96,7 +96,7 @@ func Inspect(f *ast.File, fSet *token.FileSet, cb callback, options ...InspectOp
 	pos := fSet.Position(f.Pos())
 	filePath := pos.Filename
 
-	if !option.Walk {
+	if option.RootOnly {
 		obj := clone(ctx, reflect.ValueOf(f))
 		output, ok := obj.Interface().(ast.Node)
 		if !ok {

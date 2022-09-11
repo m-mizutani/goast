@@ -99,7 +99,8 @@ func run(args []string) error {
 	}
 
 	if err := app.Run(args); err != nil {
-		logger.Err(err).Error("exit with error")
+		logger.Error(err.Error())
+		logger.Err(err).Debug("error details")
 		return err
 	}
 
@@ -136,6 +137,7 @@ func cmdEval() *cli.Command {
 		policies cli.StringSlice
 		format   string
 		output   string
+		fail     bool
 		opt      inspectOptions
 	)
 
@@ -164,6 +166,11 @@ func cmdEval() *cli.Command {
 				Destination: &output,
 				Usage:       "Output file. '-' means stdout",
 				Value:       "-",
+			},
+			&cli.BoolFlag{
+				Name:        "fail",
+				Destination: &fail,
+				Usage:       "Exit with non-zero code when detecting violation",
 			},
 		}, opt.Flags()...),
 		Action: func(c *cli.Context) error {
@@ -253,6 +260,10 @@ func cmdEval() *cli.Command {
 				if err := json.NewEncoder(w).Encode(diagnosis); err != nil {
 					return goerr.Wrap(err, "failed to convert DiagnosticResult")
 				}
+			}
+
+			if fail && len(failCases) > 0 {
+				return goerr.Wrap(errEvalFail)
 			}
 
 			return nil

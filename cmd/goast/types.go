@@ -1,5 +1,7 @@
 package main
 
+import "github.com/m-mizutani/goerr"
+
 type outputFormat int
 
 const (
@@ -16,3 +18,7 @@ func toOutputFormat(format string) (outputFormat, bool) {
 	f, ok := outputFormats[format]
 	return f, ok
 }
+
+var (
+	errEvalFail = goerr.New("violation detected")
+)

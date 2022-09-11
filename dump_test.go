@@ -29,6 +29,7 @@ func TestDumpFile(t *testing.T) {
 	var called int
 	g := goast.New(
 		goast.WithInspectOptions(
+			goast.WithRootOnly(),
 			goast.WithLine(7),         // does not work
 			goast.WithFuncName("Add"), // does not work
 		),
@@ -49,7 +50,6 @@ func TestDumpLine(t *testing.T) {
 	g := goast.New(
 		goast.WithInspectOptions(
 			goast.WithLine(7),
-			goast.WithWalk(),
 		),
 		goast.WithDumpHook(func(node *goast.Node, w io.Writer) error {
 			assert.Equal(t, "FuncDecl", node.Kind)
@@ -70,7 +70,6 @@ func TestDumpLineAllNode(t *testing.T) {
 		goast.WithInspectOptions(
 			goast.WithLine(8),
 			goast.WithAllMatched(),
-			goast.WithWalk(),
 		),
 		goast.WithDumpHook(func(node *goast.Node, w io.Writer) error {
 			// nodes of `d := a - b`

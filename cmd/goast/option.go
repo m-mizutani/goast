@@ -9,7 +9,7 @@ type inspectOptions struct {
 	Lines       cli.IntSlice
 	FuncNames   cli.StringSlice
 	ObjectDepth int
-	Walk        bool
+	RootOnly    bool
 	AllMatched  bool
 }
 
@@ -23,7 +23,7 @@ func (x *inspectOptions) Flags() []cli.Flag {
 		},
 		&cli.StringSliceFlag{
 			Name:        "func",
-			Aliases:     []string{"f"},
+			Aliases:     []string{"n"},
 			Usage:       "Function name condition for dump",
 			Destination: &x.FuncNames,
 		},
@@ -35,10 +35,10 @@ func (x *inspectOptions) Flags() []cli.Flag {
 			Value:       0,
 		},
 		&cli.BoolFlag{
-			Name:        "walk",
-			Aliases:     []string{"w"},
-			Usage:       "Enable recursive inspection",
-			Destination: &x.Walk,
+			Name:        "root-only",
+			Aliases:     []string{"r"},
+			Usage:       "Disable recursive inspection",
+			Destination: &x.RootOnly,
 		},
 		&cli.BoolFlag{
 			Name:        "all-matched",
@@ -62,8 +62,8 @@ func (x *inspectOptions) Options() []goast.InspectOption {
 	if x.ObjectDepth > 0 {
 		opt = append(opt, goast.WithObjectDepth(x.ObjectDepth))
 	}
-	if x.Walk {
-		opt = append(opt, goast.WithWalk())
+	if x.RootOnly {
+		opt = append(opt, goast.WithRootOnly())
 	}
 	if x.AllMatched {
 		opt = append(opt, goast.WithAllMatched())
