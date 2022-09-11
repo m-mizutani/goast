@@ -1,4 +1,4 @@
-name: Vuln scan
+name: trivy
 
 on: [push]
 
