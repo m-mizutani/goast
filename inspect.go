@@ -23,17 +23,17 @@ type inspectOptions struct {
 	Lines       map[int]struct{}
 	FuncNames   map[string]struct{}
 	ObjectDepth int
-	AllNode     bool
+	AllMatched  bool
 	Walk        bool
 
 	viewedLine map[int]struct{}
 }
 
-func (x *inspectOptions) ShouldInspect(n ast.Node, fs *token.FileSet) bool {
+func (x *inspectOptions) shouldInspect(n ast.Node, fs *token.FileSet) bool {
 	pos := fs.Position(n.Pos())
 	if len(x.Lines) > 0 || len(x.FuncNames) > 0 {
 		if _, ok := x.Lines[pos.Line]; ok {
-			if _, ok := x.viewedLine[pos.Line]; !x.AllNode && ok {
+			if _, ok := x.viewedLine[pos.Line]; !x.AllMatched && ok {
 				return false
 			}
 			x.viewedLine[pos.Line] = struct{}{}
@@ -76,9 +76,9 @@ func WithWalk() InspectOption {
 	}
 }
 
-func WithAllNode() InspectOption {
+func WithAllMatched() InspectOption {
 	return func(opt *inspectOptions) {
-		opt.AllNode = true
+		opt.AllMatched = true
 	}
 }
 
@@ -114,7 +114,7 @@ func Inspect(f *ast.File, fSet *token.FileSet, cb callback, options ...InspectOp
 			if n == nil {
 				return true
 			}
-			if !option.ShouldInspect(n, fSet) {
+			if !option.shouldInspect(n, fSet) {
 				return true
 			}
 

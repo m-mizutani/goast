@@ -10,7 +10,7 @@ type inspectOptions struct {
 	FuncNames   cli.StringSlice
 	ObjectDepth int
 	Walk        bool
-	AllNode     bool
+	AllMatched  bool
 }
 
 func (x *inspectOptions) Flags() []cli.Flag {
@@ -41,10 +41,10 @@ func (x *inspectOptions) Flags() []cli.Flag {
 			Destination: &x.Walk,
 		},
 		&cli.BoolFlag{
-			Name:        "all-node",
+			Name:        "all-matched",
 			Aliases:     []string{"a"},
-			Usage:       "Inspect all node in specified line number (enabled by --line option)",
-			Destination: &x.AllNode,
+			Usage:       "Inspect all node matched with condition(s))",
+			Destination: &x.AllMatched,
 		},
 	}
 }
@@ -65,8 +65,8 @@ func (x *inspectOptions) Options() []goast.InspectOption {
 	if x.Walk {
 		opt = append(opt, goast.WithWalk())
 	}
-	if x.AllNode {
-		opt = append(opt, goast.WithAllNode())
+	if x.AllMatched {
+		opt = append(opt, goast.WithAllMatched())
 	}
 
 	return opt

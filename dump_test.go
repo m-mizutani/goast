@@ -69,7 +69,7 @@ func TestDumpLineAllNode(t *testing.T) {
 	g := goast.New(
 		goast.WithInspectOptions(
 			goast.WithLine(8),
-			goast.WithAllNode(),
+			goast.WithAllMatched(),
 			goast.WithWalk(),
 		),
 		goast.WithDumpHook(func(node *goast.Node, w io.Writer) error {
