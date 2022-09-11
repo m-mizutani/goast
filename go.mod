@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/m-mizutani/goerr v0.1.7
-	github.com/m-mizutani/gots v0.0.0-20220805234349-298bca13897d
 	github.com/m-mizutani/opac v0.1.2-0.20220911011947-30fd33506a09
 	github.com/m-mizutani/zlog v0.3.2
 	github.com/reviewdog/reviewdog v0.14.1
@@ -25,6 +24,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/k0kubun/pp/v3 v3.1.0 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/open-policy-agent/opa v0.44.0 // indirect
@@ -33,7 +33,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
