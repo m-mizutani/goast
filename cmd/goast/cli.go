@@ -109,18 +109,29 @@ func run(args []string) error {
 }
 
 func cmdDump() *cli.Command {
-	var opt inspectOptions
+	var (
+		opt     inspectOptions
+		compact bool
+	)
 
 	return &cli.Command{
 		Name:    "dump",
 		Usage:   "output go codes as AST",
 		Aliases: []string{"d"},
-		Flags:   opt.Flags(),
+		Flags: append(opt.Flags(), []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "compact",
+				Aliases:     []string{"c"},
+				Usage:       "Compact instead of pretty-printed output",
+				Destination: &compact,
+			},
+		}...),
 		Action: func(c *cli.Context) error {
 			codes := c.Args().Slice()
 
 			g := goast.New(
 				goast.WithInspectOptions(opt.Options()...),
+				goast.WithCompact(compact),
 			)
 			if err := walkCode(codes, func(filePath string, r io.Reader) error {
 				return g.Dump(filePath, r, os.Stdout)
@@ -134,13 +145,22 @@ func cmdDump() *cli.Command {
 }
 
 func cmdSync() *cli.Command {
-
+	var compact bool
 	return &cli.Command{
 		Name:    "sync",
 		Usage:   "sync dump of go codes to files",
 		Aliases: []string{"s"},
+		Flags: []cli.Flag{&cli.BoolFlag{
+			Name:        "compact",
+			Aliases:     []string{"c"},
+			Usage:       "Compact instead of pretty-printed output",
+			Destination: &compact,
+		},
+		},
 		Action: func(c *cli.Context) error {
-			g := goast.New()
+			g := goast.New(
+				goast.WithCompact(compact),
+			)
 
 			for _, src := range c.Args().Slice() {
 				if err := g.Sync(src); err != nil {

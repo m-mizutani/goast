@@ -2,7 +2,6 @@ package goast
 
 import (
 	"encoding/json"
-	"fmt"
 	"go/parser"
 	"go/token"
 	"io"
@@ -11,14 +10,16 @@ import (
 )
 
 func (x *Goast) Dump(filePath string, r io.Reader, w io.Writer) error {
+	encoder := json.NewEncoder(w)
+	if !x.dumpCompact {
+		encoder.SetIndent("", "  ")
+	}
+
 	dump := func(data *Node) error {
 		if x.dumpHook == nil {
-			raw, err := json.Marshal(data)
-			if err != nil {
-				return goerr.Wrap(err)
+			if err := encoder.Encode(data); err != nil {
+				return goerr.Wrap(err, "failed to encode dump data")
 			}
-
-			fmt.Fprintln(w, string(raw))
 			return nil
 		} else {
 			return x.dumpHook(data, w)

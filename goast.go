@@ -16,7 +16,8 @@ type Goast struct {
 	mkdir  func(path string, perm fs.FileMode) error
 	walk   func(src string, cb func(fpath string, r io.Reader) error) error
 
-	dumpHook DumpHook
+	dumpCompact bool
+	dumpHook    DumpHook
 }
 
 type Option func(g *Goast)
@@ -54,3 +55,9 @@ func WithDumpHook(hook DumpHook) Option {
 }
 
 type DumpHook func(node *Node, w io.Writer) error
+
+func WithCompact(enable bool) Option {
+	return func(g *Goast) {
+		g.dumpCompact = enable
+	}
+}

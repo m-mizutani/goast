@@ -32,7 +32,11 @@ func (x *Goast) Sync(src string) error {
 			}
 		}()
 
-		if err := json.NewEncoder(fd).Encode(data); err != nil {
+		encoder := json.NewEncoder(fd)
+		if !x.dumpCompact {
+			encoder.SetIndent("", "  ")
+		}
+		if err := encoder.Encode(data); err != nil {
 			return goerr.Wrap(err, "failed to encode goast.Node")
 		}
 
