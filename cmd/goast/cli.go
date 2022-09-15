@@ -53,6 +53,7 @@ func run(args []string) error {
 		Commands: []*cli.Command{
 			cmdEval(),
 			cmdDump(),
+			cmdSync(),
 		},
 		Before: func(c *cli.Context) error {
 			options := []zlog.Option{
@@ -125,6 +126,26 @@ func cmdDump() *cli.Command {
 				return g.Dump(filePath, r, os.Stdout)
 			}); err != nil {
 				return err
+			}
+
+			return nil
+		},
+	}
+}
+
+func cmdSync() *cli.Command {
+
+	return &cli.Command{
+		Name:    "sync",
+		Usage:   "sync dump of go codes to files",
+		Aliases: []string{"s"},
+		Action: func(c *cli.Context) error {
+			g := goast.New()
+
+			for _, src := range c.Args().Slice() {
+				if err := g.Sync(src); err != nil {
+					return err
+				}
 			}
 
 			return nil
