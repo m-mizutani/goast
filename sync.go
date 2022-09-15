@@ -15,6 +15,30 @@ import (
 )
 
 func (x *Goast) Sync(src string) error {
+	dump := func(dst string, data *Node) error {
+		dir := filepath.Dir(dst)
+
+		if err := x.mkdir(dir, 0755); err != nil {
+			return goerr.Wrap(err, "failed to create dump dir").With("dir", dir)
+		}
+
+		fd, err := x.create(dst)
+		if err != nil {
+			return goerr.Wrap(err, "failed to create dump file").With("path", dst)
+		}
+		defer func() {
+			if err := fd.Close(); err != nil {
+				logger.With("path", dst).Warn(err.Error())
+			}
+		}()
+
+		if err := json.NewEncoder(fd).Encode(data); err != nil {
+			return goerr.Wrap(err, "failed to encode goast.Node")
+		}
+
+		return nil
+	}
+
 	return x.walk(src, func(fpath string, r io.Reader) error {
 		fSet := token.NewFileSet()
 		f, err := parser.ParseFile(fSet, fpath, r, parser.ParseComments)
@@ -26,28 +50,22 @@ func (x *Goast) Sync(src string) error {
 		sync := func(data *Node) error {
 			if file, ok := data.Node.(*ast.File); ok {
 				comments = toCommentMap(file, fSet)
+
+				// If goast.sync comment exists at head of file, dump *ast.File
+				if dst, ok := comments[1]; ok {
+					if err := dump(dst, data); err != nil {
+						return err
+					}
+				}
+				delete(comments, 1)
+
 				return nil
 			}
 
 			pos := fSet.Position(data.Node.Pos())
 			if dst, ok := comments[pos.Line]; ok {
-				dir := filepath.Dir(dst)
-				if err := x.mkdir(dir, 0755); err != nil {
-					return goerr.Wrap(err, "failed to create dump dir").With("dir", dir)
-				}
-
-				fd, err := x.create(dst)
-				if err != nil {
-					return goerr.Wrap(err, "failed to create dump file").With("path", dst)
-				}
-				defer func() {
-					if err := fd.Close(); err != nil {
-						logger.With("path", dst).Warn(err.Error())
-					}
-				}()
-
-				if err := json.NewEncoder(fd).Encode(data); err != nil {
-					return goerr.Wrap(err, "failed to encode goast.Node")
+				if err := dump(dst, data); err != nil {
+					return err
 				}
 
 				delete(comments, pos.Line)
