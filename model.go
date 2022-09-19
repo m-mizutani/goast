@@ -3,11 +3,15 @@ package goast
 import (
 	"go/ast"
 	"go/token"
+	"path/filepath"
 	"reflect"
 )
 
 type Node struct {
-	Path string
+	Path     string
+	FileName string
+	DirName  string
+
 	Node ast.Node
 	Kind string
 
@@ -16,7 +20,10 @@ type Node struct {
 
 func newNode(fpath string, node ast.Node, fset *token.FileSet) *Node {
 	return &Node{
-		Path:    fpath,
+		Path:     fpath,
+		DirName:  filepath.Dir(fpath),
+		FileName: filepath.Base(fpath),
+
 		Node:    node,
 		Kind:    reflect.ValueOf(node).Elem().Type().Name(),
 		fileSet: fset,
