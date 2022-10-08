@@ -271,8 +271,11 @@ func cmdEval() *cli.Command {
 			switch f {
 			case outputText:
 				for _, fail := range failCases {
-					fmt.Fprintf(w, "[%s:%d] - %s\n", fail.Path, fail.Line, fail.Msg)
+					if err := outputFailAsText(w, fail); err != nil {
+						return err
+					}
 				}
+
 				fmt.Fprintf(w, "\n\tDetected %d violations\n\n", len(failCases))
 
 			case outputJSON:

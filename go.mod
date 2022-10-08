@@ -3,6 +3,7 @@ module github.com/m-mizutani/goast
 go 1.18
 
 require (
+	github.com/fatih/color v1.13.0
 	github.com/m-mizutani/goerr v0.1.7
 	github.com/m-mizutani/opac v0.1.2-0.20220911011947-30fd33506a09
 	github.com/m-mizutani/zlog v0.3.2
