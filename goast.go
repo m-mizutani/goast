@@ -18,6 +18,8 @@ type Goast struct {
 
 	dumpCompact bool
 	dumpHook    DumpHook
+
+	ignoreAutoGen bool
 }
 
 type Option func(g *Goast)
@@ -59,5 +61,11 @@ type DumpHook func(node *Node, w io.Writer) error
 func WithCompact(enable bool) Option {
 	return func(g *Goast) {
 		g.dumpCompact = enable
+	}
+}
+
+func WithIgnoreAutoGen() Option {
+	return func(g *Goast) {
+		g.ignoreAutoGen = true
 	}
 }

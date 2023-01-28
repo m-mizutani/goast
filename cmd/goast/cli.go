@@ -175,11 +175,12 @@ func cmdSync() *cli.Command {
 
 func cmdEval() *cli.Command {
 	var (
-		policies cli.StringSlice
-		format   string
-		output   string
-		fail     bool
-		opt      inspectOptions
+		policies      cli.StringSlice
+		format        string
+		output        string
+		fail          bool
+		opt           inspectOptions
+		ignoreAutoGen bool
 	)
 
 	return &cli.Command{
@@ -212,6 +213,11 @@ func cmdEval() *cli.Command {
 				Name:        "fail",
 				Destination: &fail,
 				Usage:       "Exit with non-zero code when detecting violation",
+			},
+			&cli.BoolFlag{
+				Name:        "ignore-auto-generated",
+				Destination: &ignoreAutoGen,
+				Usage:       "Ignore auto generated go code file",
 			},
 		}, opt.Flags()...),
 		Action: func(c *cli.Context) error {
@@ -250,10 +256,15 @@ func cmdEval() *cli.Command {
 				return goerr.Wrap(err)
 			}
 
-			g := goast.New(
+			goastOptions := []goast.Option{
 				goast.WithOpacClient(client),
 				goast.WithInspectOptions(opt.Options()...),
-			)
+			}
+			if ignoreAutoGen {
+				goastOptions = append(goastOptions, goast.WithIgnoreAutoGen())
+			}
+
+			g := goast.New(goastOptions...)
 
 			var failCases []*goast.Fail
 
