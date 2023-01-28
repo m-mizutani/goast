@@ -2,9 +2,11 @@ package goast
 
 import (
 	"context"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"io"
+	"regexp"
 
 	"github.com/m-mizutani/goerr"
 )
@@ -17,6 +19,19 @@ type failCase struct {
 
 type evalOutput struct {
 	Fail []*failCase `json:"fail"`
+}
+
+var generatedCodePattern = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
+
+func isGeneratedFile(file *ast.File) bool {
+	for _, comment := range file.Comments {
+		for _, row := range comment.List {
+			if generatedCodePattern.MatchString(row.Text) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
@@ -47,6 +62,10 @@ func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
 	f, err := parser.ParseFile(fSet, filePath, r, parser.ParseComments)
 	if err != nil {
 		return nil, err
+	}
+
+	if x.ignoreAutoGen && isGeneratedFile(f) {
+		return nil, nil
 	}
 
 	if err := Inspect(f, fSet, callback, x.inspectOpt...); err != nil {
