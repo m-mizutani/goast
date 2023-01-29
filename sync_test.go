@@ -9,8 +9,7 @@ import (
 	"testing"
 
 	"github.com/m-mizutani/goast"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/m-mizutani/gt"
 )
 
 type buffer struct {
@@ -47,8 +46,8 @@ func TestSync(t *testing.T) {
 		}),
 		goast.WithMkDirFunc(func(path string, perm fs.FileMode) error {
 			mkdirCount++
-			assert.Equal(t, "test/sync/dir", path)
-			assert.Equal(t, fs.FileMode(0755), perm)
+			gt.V(t, path).Equal("test/sync/dir")
+			gt.V(t, perm).Equal(fs.FileMode(0755))
 			return nil
 		}),
 		goast.WithCreateFunc(func(path string) (io.WriteCloser, error) {
@@ -56,21 +55,22 @@ func TestSync(t *testing.T) {
 				"test/sync/dir/dest1.json",
 				"test/sync/dir/dest2.json",
 			}
-			assert.Equal(t, files[createCount], path)
+			gt.V(t, path).Equal(files[createCount])
 			createCount++
 			return buf, nil
 		}),
 	)
-	require.NoError(t, g.Sync("src_dir"))
+	gt.NoError(t, g.Sync("src_dir")).Must()
 
-	assert.Equal(t, 1, walkCount)
-	assert.Equal(t, 2, mkdirCount)
-	assert.Equal(t, 2, createCount)
+	gt.V(t, walkCount).Equal(1)
+	gt.V(t, mkdirCount).Equal(2)
+	gt.V(t, createCount).Equal(2)
 
 	var out node
 	r := bytes.NewReader(buf.Bytes())
-	require.NoError(t, json.NewDecoder(r).Decode(&out))
-	assert.Equal(t, "ExprStmt", out.Kind)
+	gt.NoError(t, json.NewDecoder(r).Decode(&out)).Must()
+	gt.V(t, out.Kind).Equal("ExprStmt")
+
 }
 
 func TestSyncFile(t *testing.T) {
@@ -95,24 +95,24 @@ func TestSyncFile(t *testing.T) {
 		}),
 		goast.WithMkDirFunc(func(path string, perm fs.FileMode) error {
 			mkdirCount++
-			assert.Equal(t, "test", path)
-			assert.Equal(t, fs.FileMode(0755), perm)
+			gt.V(t, path).Equal("test")
+			gt.V(t, perm).Equal(fs.FileMode(0755))
 			return nil
 		}),
 		goast.WithCreateFunc(func(path string) (io.WriteCloser, error) {
 			createCount++
-			assert.Equal(t, "test/file.json", path)
+			gt.V(t, path).Equal("test/file.json")
 			return buf, nil
 		}),
 	)
-	require.NoError(t, g.Sync("src_dir"))
+	gt.NoError(t, g.Sync("src_dir")).Must()
 
-	assert.Equal(t, 1, walkCount)
-	assert.Equal(t, 1, mkdirCount)
-	assert.Equal(t, 1, createCount)
+	gt.V(t, walkCount).Equal(1)
+	gt.V(t, mkdirCount).Equal(1)
+	gt.V(t, createCount).Equal(1)
 
 	var out node
 	r := bytes.NewReader(buf.Bytes())
-	require.NoError(t, json.NewDecoder(r).Decode(&out))
-	assert.Equal(t, "File", out.Kind)
+	gt.NoError(t, json.NewDecoder(r).Decode(&out)).Must()
+	gt.V(t, out.Kind).Equal("File")
 }
