@@ -7,8 +7,7 @@ import (
 	"testing"
 
 	"github.com/m-mizutani/goast"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/m-mizutani/gt"
 )
 
 const dumpExampleCode = `package main
@@ -35,13 +34,13 @@ func TestDumpFile(t *testing.T) {
 		),
 		goast.WithDumpHook(func(node *goast.Node, w io.Writer) error {
 			called++
-			assert.Equal(t, "File", node.Kind)
+			gt.Value(t, node.Kind).Equal("File")
 			return nil
 		}),
 	)
 
-	require.NoError(t, g.Dump("test.go", code, nil))
-	assert.Equal(t, 1, called)
+	gt.NoError(t, g.Dump("test.go", code, nil)).Must()
+	gt.Value(t, called).Equal(1)
 }
 
 func TestDumpLine(t *testing.T) {
@@ -52,15 +51,15 @@ func TestDumpLine(t *testing.T) {
 			goast.WithLine(7),
 		),
 		goast.WithDumpHook(func(node *goast.Node, w io.Writer) error {
-			assert.Equal(t, "FuncDecl", node.Kind)
-			f, ok := node.Node.(*ast.FuncDecl)
-			require.True(t, ok)
-			assert.Equal(t, "Sub", f.Name.Name)
-			assert.Len(t, f.Body.List, 2)
+			gt.V(t, node.Kind).Equal("FuncDecl")
+
+			f := gt.Cast[*ast.FuncDecl](t, node.Node)
+			gt.V(t, f.Name.Name).Equal("Sub")
+			gt.A(t, f.Body.List).Length(2)
 			return nil
 		}),
 	)
-	require.NoError(t, g.Dump("test.go", code, nil))
+	gt.NoError(t, g.Dump("test.go", code, nil)).Must()
 }
 
 func TestDumpLineAllNode(t *testing.T) {
@@ -80,13 +79,13 @@ func TestDumpLineAllNode(t *testing.T) {
 				"Ident",
 				"Ident",
 			}
-			assert.Equal(t, kinds[cnt], node.Kind)
+			gt.V(t, node.Kind).Equal(kinds[cnt])
 			cnt++
 			return nil
 		}),
 	)
-	require.NoError(t, g.Dump("test.go", code, nil))
-	assert.Equal(t, 5, cnt)
+	gt.NoError(t, g.Dump("test.go", code, nil)).Must()
+	gt.V(t, cnt).Equal(5)
 }
 
 /*
