@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 )
 
 func (x *Goast) Sync(src string) error {
@@ -19,16 +19,16 @@ func (x *Goast) Sync(src string) error {
 		dir := filepath.Dir(dst)
 
 		if err := x.mkdir(dir, 0755); err != nil {
-			return goerr.Wrap(err, "failed to create dump dir").With("dir", dir)
+			return goerr.Wrap(err, "failed to create dump dir", goerr.V("dir", dir))
 		}
 
 		fd, err := x.create(dst)
 		if err != nil {
-			return goerr.Wrap(err, "failed to create dump file").With("path", dst)
+			return goerr.Wrap(err, "failed to create dump file", goerr.V("path", dst))
 		}
 		defer func() {
 			if err := fd.Close(); err != nil {
-				logger.With("path", dst).Warn(err.Error())
+				logger.With("path", dst).Warn("%s", err.Error())
 			}
 		}()
 
@@ -47,7 +47,7 @@ func (x *Goast) Sync(src string) error {
 		fSet := token.NewFileSet()
 		f, err := parser.ParseFile(fSet, fpath, r, parser.ParseComments)
 		if err != nil {
-			return goerr.Wrap(err)
+			return goerr.Wrap(err, "failed to parse go file", goerr.V("path", fpath))
 		}
 
 		comments := map[int]string{}
@@ -108,7 +108,7 @@ func toCommentMap(f *ast.File, fSet *token.FileSet) map[int]string {
 func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return goerr.Wrap(err)
+			return goerr.Wrap(err, "failed to walk source directory", goerr.V("path", path))
 		}
 		if d.IsDir() {
 			return nil
@@ -123,7 +123,7 @@ func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 
 		fd, err := os.Open(fpath)
 		if err != nil {
-			return goerr.Wrap(err)
+			return goerr.Wrap(err, "failed to open go file", goerr.V("path", fpath))
 		}
 		defer func() {
 			if err := fd.Close(); err != nil {
@@ -137,7 +137,7 @@ func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 
 		return nil
 	}); err != nil {
-		return goerr.Wrap(err)
+		return goerr.Wrap(err, "failed to walk go source")
 	}
 
 	return nil

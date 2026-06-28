@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/m-mizutani/goast"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 type inspectOptions struct {
-	Lines       cli.IntSlice
-	FuncNames   cli.StringSlice
+	Lines       []int
+	FuncNames   []string
 	ObjectDepth int
 	RootOnly    bool
 	AllMatched  bool
@@ -52,10 +52,10 @@ func (x *inspectOptions) Flags() []cli.Flag {
 func (x *inspectOptions) Options() []goast.InspectOption {
 	var opt []goast.InspectOption
 
-	for _, v := range x.Lines.Value() {
+	for _, v := range x.Lines {
 		opt = append(opt, goast.WithLine(v))
 	}
-	for _, v := range x.FuncNames.Value() {
+	for _, v := range x.FuncNames {
 		opt = append(opt, goast.WithFuncName(v))
 	}
 

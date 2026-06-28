@@ -1,6 +1,7 @@
 package goast
 
 import (
+	"context"
 	"io"
 	"io/fs"
 	"os"
@@ -8,8 +9,15 @@ import (
 	"github.com/m-mizutani/opac"
 )
 
+// policyEngine is the subset of *opac.Client that Goast depends on. opac v0.2+
+// exposes Client as a concrete struct, so an interface is declared here to keep
+// Eval testable without standing up a real OPA evaluation.
+type policyEngine interface {
+	Query(ctx context.Context, query string, input, output any, options ...opac.QueryOption) error
+}
+
 type Goast struct {
-	opac       opac.Client
+	opac       policyEngine
 	inspectOpt []InspectOption
 
 	create func(path string) (io.WriteCloser, error)
@@ -38,7 +46,7 @@ func New(options ...Option) *Goast {
 	return g
 }
 
-func WithOpacClient(client opac.Client) Option {
+func WithOpacClient(client policyEngine) Option {
 	return func(g *Goast) {
 		g.opac = client
 	}

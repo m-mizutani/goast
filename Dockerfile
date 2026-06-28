@@ -1,4 +1,4 @@
-FROM golang:1.19 AS build-go
+FROM golang:1.26 AS build-go
 ADD . /src
 WORKDIR /src
 RUN go build -o goast ./cmd/goast
