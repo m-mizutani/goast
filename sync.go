@@ -29,7 +29,7 @@ func (x *Goast) Sync(src string) error {
 		}
 		defer func() {
 			if err := fd.Close(); err != nil {
-				logger.Warn("failed to close dump file", slog.String("path", dst), slog.Any("error", err))
+				Logger().Warn("failed to close dump file", slog.String("path", dst), slog.Any("error", err))
 			}
 		}()
 
@@ -120,7 +120,7 @@ func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 			return nil
 		}
 
-		logger.Debug("loading file", slog.String("file", fpath))
+		Logger().Debug("loading file", slog.String("file", fpath))
 
 		fd, err := os.Open(fpath)
 		if err != nil {
@@ -128,7 +128,7 @@ func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 		}
 		defer func() {
 			if err := fd.Close(); err != nil {
-				logger.Warn("failed to close file", slog.String("file", fpath), slog.Any("error", err))
+				Logger().Warn("failed to close file", slog.String("file", fpath), slog.Any("error", err))
 			}
 		}()
 
