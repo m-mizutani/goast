@@ -9,7 +9,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/m-mizutani/goast"
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 )
 
 func outputFailAsText(w io.Writer, fail *goast.Fail) error {
@@ -49,11 +49,11 @@ func outputFailAsText(w io.Writer, fail *goast.Fail) error {
 func getLine(path string, line int) (string, error) {
 	fd, err := os.Open(path)
 	if err != nil {
-		return "", goerr.Wrap(err)
+		return "", goerr.Wrap(err, "failed to open file", goerr.V("path", path))
 	}
 	defer func() {
 		if err := fd.Close(); err != nil {
-			logger.Warn(err.Error())
+			logger.Warn("%s", err.Error())
 		}
 	}()
 

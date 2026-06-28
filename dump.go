@@ -6,7 +6,7 @@ import (
 	"go/token"
 	"io"
 
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 )
 
 func (x *Goast) Dump(filePath string, r io.Reader, w io.Writer) error {
@@ -29,7 +29,7 @@ func (x *Goast) Dump(filePath string, r io.Reader, w io.Writer) error {
 	fSet := token.NewFileSet()
 	f, err := parser.ParseFile(fSet, filePath, r, parser.ParseComments)
 	if err != nil {
-		return goerr.Wrap(err)
+		return goerr.Wrap(err, "failed to parse go file", goerr.V("path", filePath))
 	}
 
 	if err := Inspect(f, fSet, dump, x.inspectOpt...); err != nil {

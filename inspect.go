@@ -5,7 +5,7 @@ import (
 	"go/token"
 	"reflect"
 
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 )
 
 type InspectOption func(options *inspectOptions)

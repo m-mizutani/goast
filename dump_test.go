@@ -39,7 +39,7 @@ func TestDumpFile(t *testing.T) {
 		}),
 	)
 
-	gt.NoError(t, g.Dump("test.go", code, nil)).Must()
+	gt.NoError(t, g.Dump("test.go", code, nil)).Required()
 	gt.Value(t, called).Equal(1)
 }
 
@@ -59,7 +59,7 @@ func TestDumpLine(t *testing.T) {
 			return nil
 		}),
 	)
-	gt.NoError(t, g.Dump("test.go", code, nil)).Must()
+	gt.NoError(t, g.Dump("test.go", code, nil)).Required()
 }
 
 func TestDumpLineAllNode(t *testing.T) {
@@ -84,7 +84,7 @@ func TestDumpLineAllNode(t *testing.T) {
 			return nil
 		}),
 	)
-	gt.NoError(t, g.Dump("test.go", code, nil)).Must()
+	gt.NoError(t, g.Dump("test.go", code, nil)).Required()
 	gt.V(t, cnt).Equal(5)
 }
 

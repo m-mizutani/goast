@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/m-mizutani/goast"
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 )
 
 type callback func(filePath string, r io.Reader) error
@@ -16,7 +16,7 @@ func walkCode(codes []string, cb callback) error {
 	for _, codePath := range codes {
 		if err := filepath.WalkDir(codePath, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return goerr.Wrap(err)
+				return goerr.Wrap(err, "failed to walk code path", goerr.V("path", path))
 			}
 			if d.IsDir() {
 				return nil
@@ -31,7 +31,7 @@ func walkCode(codes []string, cb callback) error {
 
 			fd, err := os.Open(fpath)
 			if err != nil {
-				return goerr.Wrap(err)
+				return goerr.Wrap(err, "failed to open go file", goerr.V("path", fpath))
 			}
 			defer func() {
 				if err := fd.Close(); err != nil {
@@ -45,7 +45,7 @@ func walkCode(codes []string, cb callback) error {
 
 			return nil
 		}); err != nil {
-			return goerr.Wrap(err)
+			return goerr.Wrap(err, "failed to walk code path", goerr.V("path", codePath))
 		}
 	}
 

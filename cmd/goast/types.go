@@ -1,6 +1,6 @@
 package main
 
-import "github.com/m-mizutani/goerr"
+import "github.com/m-mizutani/goerr/v2"
 
 type outputFormat int
 

@@ -60,7 +60,7 @@ func TestSync(t *testing.T) {
 			return buf, nil
 		}),
 	)
-	gt.NoError(t, g.Sync("src_dir")).Must()
+	gt.NoError(t, g.Sync("src_dir")).Required()
 
 	gt.V(t, walkCount).Equal(1)
 	gt.V(t, mkdirCount).Equal(2)
@@ -68,7 +68,7 @@ func TestSync(t *testing.T) {
 
 	var out node
 	r := bytes.NewReader(buf.Bytes())
-	gt.NoError(t, json.NewDecoder(r).Decode(&out)).Must()
+	gt.NoError(t, json.NewDecoder(r).Decode(&out)).Required()
 	gt.V(t, out.Kind).Equal("ExprStmt")
 
 }
@@ -105,7 +105,7 @@ func TestSyncFile(t *testing.T) {
 			return buf, nil
 		}),
 	)
-	gt.NoError(t, g.Sync("src_dir")).Must()
+	gt.NoError(t, g.Sync("src_dir")).Required()
 
 	gt.V(t, walkCount).Equal(1)
 	gt.V(t, mkdirCount).Equal(1)
@@ -113,6 +113,6 @@ func TestSyncFile(t *testing.T) {
 
 	var out node
 	r := bytes.NewReader(buf.Bytes())
-	gt.NoError(t, json.NewDecoder(r).Decode(&out)).Must()
+	gt.NoError(t, json.NewDecoder(r).Decode(&out)).Required()
 	gt.V(t, out.Kind).Equal("File")
 }

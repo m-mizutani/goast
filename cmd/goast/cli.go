@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,11 +9,11 @@ import (
 	"path/filepath"
 
 	"github.com/m-mizutani/goast"
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 	"github.com/m-mizutani/opac"
 	"github.com/m-mizutani/zlog"
 	"github.com/reviewdog/reviewdog/proto/rdf"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var logger = zlog.New()
@@ -24,28 +25,28 @@ func run(args []string) error {
 		logOutput string
 	)
 
-	app := cli.App{
+	cmd := &cli.Command{
 		Name: "goast",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "log-level",
 				Usage:       "[debug|info|warn|error]",
 				Aliases:     []string{"l"},
-				EnvVars:     []string{"GOAST_LOG_LEVEL"},
+				Sources:     cli.EnvVars("GOAST_LOG_LEVEL"),
 				Value:       "info",
 				Destination: &logLevel,
 			},
 			&cli.StringFlag{
 				Name:        "log-format",
 				Usage:       "[text|json]",
-				EnvVars:     []string{"GOAST_LOG_FORMAT"},
+				Sources:     cli.EnvVars("GOAST_LOG_FORMAT"),
 				Value:       "text",
 				Destination: &logFormat,
 			},
 			&cli.StringFlag{
 				Name:        "log-output",
 				Usage:       "[stdout|stderr|$FILENAME]",
-				EnvVars:     []string{"GOAST_LOG_OUTPUT"},
+				Sources:     cli.EnvVars("GOAST_LOG_OUTPUT"),
 				Value:       "stderr",
 				Destination: &logOutput,
 			},
@@ -55,7 +56,7 @@ func run(args []string) error {
 			cmdDump(),
 			cmdSync(),
 		},
-		Before: func(c *cli.Context) error {
+		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			options := []zlog.Option{
 				zlog.WithLogLevel(logLevel),
 			}
@@ -67,15 +68,15 @@ func run(args []string) error {
 			case "stderr":
 				w = os.Stderr
 			default:
+				// The log file must stay open for the whole command run, so it
+				// is not closed here: Before returns before Action executes, and
+				// closing it now would break logging during the command. The OS
+				// reclaims the descriptor when the process exits.
 				logFile, err := os.Create(filepath.Clean(logOutput))
 				if err != nil {
-					return goerr.Wrap(err)
+					return ctx, goerr.Wrap(err, "failed to create log file", goerr.V("path", logOutput))
 				}
-				defer func() {
-					if err := logFile.Close(); err != nil {
-						goast.Logger().Warn("failed to close a log file: %s", err)
-					}
-				}()
+				w = logFile
 			}
 
 			switch logFormat {
@@ -90,17 +91,17 @@ func run(args []string) error {
 				))
 
 			default:
-				return goerr.New("unsupported log format: " + logFormat)
+				return ctx, goerr.New("unsupported log format", goerr.V("format", logFormat))
 			}
 
 			goast.RenewLogger(options)
 
-			return nil
+			return ctx, nil
 		},
 	}
 
-	if err := app.Run(args); err != nil {
-		logger.Error(err.Error())
+	if err := cmd.Run(context.Background(), args); err != nil {
+		logger.Error("%s", err.Error())
 		logger.Err(err).Debug("error details")
 		return err
 	}
@@ -126,7 +127,7 @@ func cmdDump() *cli.Command {
 				Destination: &compact,
 			},
 		}...),
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			codes := c.Args().Slice()
 
 			g := goast.New(
@@ -157,7 +158,7 @@ func cmdSync() *cli.Command {
 			Destination: &compact,
 		},
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			g := goast.New(
 				goast.WithCompact(compact),
 			)
@@ -175,7 +176,7 @@ func cmdSync() *cli.Command {
 
 func cmdEval() *cli.Command {
 	var (
-		policies      cli.StringSlice
+		policies      []string
 		format        string
 		output        string
 		fail          bool
@@ -220,13 +221,13 @@ func cmdEval() *cli.Command {
 				Usage:       "Ignore auto generated go code file",
 			},
 		}, opt.Flags()...),
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			files := c.Args().Slice()
 
 			// format
 			f, ok := toOutputFormat(format)
 			if !ok {
-				return goerr.New("unsupported output format").With("format", format)
+				return goerr.New("unsupported output format", goerr.V("format", format))
 			}
 
 			// output
@@ -247,13 +248,9 @@ func cmdEval() *cli.Command {
 			}
 
 			// policy
-			opacOpt := []opac.LocalOption{opac.WithPackage("goast")}
-			for _, policy := range policies.Value() {
-				opacOpt = append(opacOpt, opac.WithDir(policy))
-			}
-			client, err := opac.NewLocal(opacOpt...)
+			client, err := opac.New(opac.Files(policies...))
 			if err != nil {
-				return goerr.Wrap(err)
+				return goerr.Wrap(err, "failed to load policy", goerr.V("policies", policies))
 			}
 
 			goastOptions := []goast.Option{
@@ -318,7 +315,7 @@ func cmdEval() *cli.Command {
 			}
 
 			if fail && len(failCases) > 0 {
-				return goerr.Wrap(errEvalFail)
+				return goerr.Wrap(errEvalFail, "violations detected", goerr.V("count", len(failCases)))
 			}
 
 			return nil

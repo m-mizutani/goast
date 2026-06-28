@@ -8,8 +8,12 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/goerr/v2"
 )
+
+// evalQuery is the Rego query Eval runs against the loaded policies. It matches
+// the "goast" package the CLI compiles policies into.
+const evalQuery = "data.goast"
 
 type failCase struct {
 	Msg string `json:"msg"`
@@ -40,8 +44,8 @@ func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
 	callback := func(data *Node) error {
 		ctx := context.Background()
 		var out evalOutput
-		if err := x.opac.Query(ctx, data, &out); err != nil {
-			return goerr.Wrap(err)
+		if err := x.opac.Query(ctx, evalQuery, data, &out); err != nil {
+			return goerr.Wrap(err, "failed to evaluate policy")
 		}
 
 		for _, fail := range out.Fail {
