@@ -5,18 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/m-mizutani/goast"
 	"github.com/m-mizutani/goerr/v2"
 	"github.com/m-mizutani/opac"
-	"github.com/m-mizutani/zlog"
 	"github.com/reviewdog/reviewdog/proto/rdf"
 	"github.com/urfave/cli/v3"
 )
 
-var logger = zlog.New()
+var logger = slog.Default()
 
 func run(args []string) error {
 	var (
@@ -57,8 +57,9 @@ func run(args []string) error {
 			cmdSync(),
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-			options := []zlog.Option{
-				zlog.WithLogLevel(logLevel),
+			level, err := parseLogLevel(logLevel)
+			if err != nil {
+				return ctx, err
 			}
 
 			var w io.Writer
@@ -79,30 +80,21 @@ func run(args []string) error {
 				w = logFile
 			}
 
-			switch logFormat {
-			case "text":
-				options = append(options, zlog.WithEmitter(
-					zlog.NewConsoleEmitter(zlog.ConsoleWriter(w)),
-				))
-
-			case "json":
-				options = append(options, zlog.WithEmitter(
-					zlog.NewJsonEmitter(zlog.JsonWriter(w)),
-				))
-
-			default:
-				return ctx, goerr.New("unsupported log format", goerr.V("format", logFormat))
+			l, err := newLogger(w, level, logFormat)
+			if err != nil {
+				return ctx, err
 			}
 
-			goast.RenewLogger(options)
+			logger = l
+			goast.SetLogger(l)
 
 			return ctx, nil
 		},
 	}
 
 	if err := cmd.Run(context.Background(), args); err != nil {
-		logger.Error("%s", err.Error())
-		logger.Err(err).Debug("error details")
+		logger.Error("command failed", slog.Any("error", err))
+		logger.Debug("error details", slog.Any("error", err))
 		return err
 	}
 
@@ -241,7 +233,7 @@ func cmdEval() *cli.Command {
 				}
 				defer func() {
 					if err := fd.Close(); err != nil {
-						logger.Err(err).Warn("failed to close output file")
+						logger.Warn("failed to close output file", slog.Any("error", err))
 					}
 				}()
 				w = fd

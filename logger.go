@@ -1,13 +1,16 @@
 package goast
 
-import "github.com/m-mizutani/zlog"
+import "log/slog"
 
-var logger = zlog.New()
+var logger = slog.Default()
 
-func RenewLogger(options []zlog.Option) {
-	logger = logger.Clone(options...)
+// SetLogger replaces the package-level logger used by goast internals. The
+// caller (typically the CLI) is responsible for constructing the slog.Logger
+// with the desired handler, level and output.
+func SetLogger(l *slog.Logger) {
+	logger = l
 }
 
-func Logger() *zlog.Logger {
+func Logger() *slog.Logger {
 	return logger
 }

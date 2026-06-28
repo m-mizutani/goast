@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -27,7 +28,7 @@ func walkCode(codes []string, cb callback) error {
 				return nil
 			}
 
-			goast.Logger().With("file", fpath).Debug("loading file")
+			goast.Logger().Debug("loading file", slog.String("file", fpath))
 
 			fd, err := os.Open(fpath)
 			if err != nil {
@@ -35,7 +36,7 @@ func walkCode(codes []string, cb callback) error {
 			}
 			defer func() {
 				if err := fd.Close(); err != nil {
-					goast.Logger().Err(err).With("file", fpath).Warn("failed to close file")
+					goast.Logger().Warn("failed to close file", slog.String("file", fpath), slog.Any("error", err))
 				}
 			}()
 
