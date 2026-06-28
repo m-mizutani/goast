@@ -93,8 +93,11 @@ func run(args []string) error {
 	}
 
 	if err := cmd.Run(context.Background(), args); err != nil {
+		// Error carries the goerr values (expanded by the GoErr hook) for a
+		// concise report; the full stack trace is reserved for debug level so
+		// it does not clutter normal output.
 		logger.Error("command failed", slog.Any("error", err))
-		logger.Debug("error details", slog.Any("error", err))
+		logger.Debug("error details", slog.String("stacktrace", fmt.Sprintf("%+v", err)))
 		return err
 	}
 

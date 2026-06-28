@@ -8,6 +8,7 @@ require (
 	github.com/m-mizutani/goerr/v2 v2.0.1
 	github.com/m-mizutani/gt v0.2.1
 	github.com/m-mizutani/opac v0.2.2
+	github.com/mattn/go-isatty v0.0.20
 	github.com/reviewdog/reviewdog v0.21.0
 	github.com/urfave/cli/v3 v3.10.0
 )
@@ -29,7 +30,6 @@ require (
 	github.com/lestrrat-go/jwx/v3 v3.1.1 // indirect
 	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/open-policy-agent/opa v1.18.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect

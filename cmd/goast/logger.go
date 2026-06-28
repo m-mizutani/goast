@@ -3,11 +3,13 @@ package main
 import (
 	"io"
 	"log/slog"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/m-mizutani/clog"
 	"github.com/m-mizutani/clog/hooks"
 	"github.com/m-mizutani/goerr/v2"
+	"github.com/mattn/go-isatty"
 )
 
 // parseLogLevel converts a human readable log level into slog.Level.
@@ -34,9 +36,19 @@ func newLogger(w io.Writer, level slog.Level, format string) (*slog.Logger, erro
 	var handler slog.Handler
 	switch format {
 	case "text":
+		// clog decides coloring from $TERM by default, ignoring the actual
+		// writer. That would leak ANSI escapes into a file when --log-output
+		// points to one while running under a color-capable terminal. Gate
+		// coloring on whether the writer itself is a TTY.
+		enableColor := false
+		if f, ok := w.(*os.File); ok {
+			enableColor = isatty.IsTerminal(f.Fd())
+		}
+
 		handler = clog.New(
 			clog.WithWriter(w),
 			clog.WithLevel(level),
+			clog.WithColor(enableColor),
 			clog.WithAttrHook(hooks.GoErr()),
 			clog.WithColorMap(&clog.ColorMap{
 				Level: map[slog.Level]*color.Color{

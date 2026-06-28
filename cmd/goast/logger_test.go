@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/m-mizutani/goerr/v2"
@@ -91,4 +94,24 @@ func TestNewLoggerLevelFilter(t *testing.T) {
 func TestNewLoggerUnsupportedFormat(t *testing.T) {
 	_, err := newLogger(&bytes.Buffer{}, slog.LevelInfo, "xml")
 	gt.Error(t, err)
+}
+
+func TestNewLoggerTextNoColorToFile(t *testing.T) {
+	// Writing the text format to a file (a non-TTY destination) must not emit
+	// ANSI escape sequences, even when running under a color-capable terminal.
+	path := filepath.Join(t.TempDir(), "app.log")
+	fd, err := os.Create(path)
+	gt.NoError(t, err)
+	t.Cleanup(func() { _ = fd.Close() })
+
+	l, err := newLogger(fd, slog.LevelInfo, "text")
+	gt.NoError(t, err)
+
+	l.Info("hello", slog.String("file", "main.go"))
+	gt.NoError(t, fd.Sync())
+
+	body, err := os.ReadFile(path)
+	gt.NoError(t, err)
+	gt.S(t, string(body)).Contains("hello").Contains("main.go")
+	gt.False(t, strings.Contains(string(body), "\x1b["))
 }
