@@ -68,15 +68,15 @@ func run(args []string) error {
 			case "stderr":
 				w = os.Stderr
 			default:
+				// The log file must stay open for the whole command run, so it
+				// is not closed here: Before returns before Action executes, and
+				// closing it now would break logging during the command. The OS
+				// reclaims the descriptor when the process exits.
 				logFile, err := os.Create(filepath.Clean(logOutput))
 				if err != nil {
 					return ctx, goerr.Wrap(err, "failed to create log file", goerr.V("path", logOutput))
 				}
-				defer func() {
-					if err := logFile.Close(); err != nil {
-						goast.Logger().Warn("failed to close a log file: %s", err)
-					}
-				}()
+				w = logFile
 			}
 
 			switch logFormat {
