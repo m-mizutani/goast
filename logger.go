@@ -1,13 +1,26 @@
 package goast
 
-import "github.com/m-mizutani/zlog"
+import (
+	"log/slog"
+	"sync/atomic"
+)
 
-var logger = zlog.New()
+// logger is stored atomically so that SetLogger and Logger are safe for
+// concurrent use: goast is a library and callers may replace the logger at any
+// time while internals are emitting logs.
+var logger atomic.Pointer[slog.Logger]
 
-func RenewLogger(options []zlog.Option) {
-	logger = logger.Clone(options...)
+func init() {
+	logger.Store(slog.Default())
 }
 
-func Logger() *zlog.Logger {
-	return logger
+// SetLogger replaces the package-level logger used by goast internals. The
+// caller (typically the CLI) is responsible for constructing the slog.Logger
+// with the desired handler, level and output.
+func SetLogger(l *slog.Logger) {
+	logger.Store(l)
+}
+
+func Logger() *slog.Logger {
+	return logger.Load()
 }

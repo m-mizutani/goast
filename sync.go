@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,7 +29,7 @@ func (x *Goast) Sync(src string) error {
 		}
 		defer func() {
 			if err := fd.Close(); err != nil {
-				logger.With("path", dst).Warn("%s", err.Error())
+				Logger().Warn("failed to close dump file", slog.String("path", dst), slog.Any("error", err))
 			}
 		}()
 
@@ -119,7 +120,7 @@ func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 			return nil
 		}
 
-		logger.With("file", fpath).Debug("loading file")
+		Logger().Debug("loading file", slog.String("file", fpath))
 
 		fd, err := os.Open(fpath)
 		if err != nil {
@@ -127,7 +128,7 @@ func walkGoCode(src string, cb func(fpath string, r io.Reader) error) error {
 		}
 		defer func() {
 			if err := fd.Close(); err != nil {
-				logger.Err(err).With("file", fpath).Warn("failed to close file")
+				Logger().Warn("failed to close file", slog.String("file", fpath), slog.Any("error", err))
 			}
 		}()
 
