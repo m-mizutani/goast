@@ -32,8 +32,13 @@ type PolicyEngine struct {
 // and compiles them as Rego v1. A directory is walked recursively for *.rego files.
 func NewPolicyEngine(paths ...string) (*PolicyEngine, error) {
 	// Collect the .rego paths during the walk and read them afterwards, keeping the
-	// file reads out of the WalkDir callback.
+	// file reads out of the WalkDir callback. Deduplicate by absolute path so that
+	// overlapping arguments (e.g. a directory and a file inside it, or the same path
+	// given in both relative and absolute form) do not load a module twice and make
+	// the compiler fail with a duplicate-rule error. The readable, cleaned path is
+	// kept as the module identifier so compile errors point at the given path.
 	var regoFiles []string
+	seen := map[string]bool{}
 	for _, path := range paths {
 		err := filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -42,6 +47,14 @@ func NewPolicyEngine(paths ...string) (*PolicyEngine, error) {
 			if d.IsDir() || filepath.Ext(p) != ".rego" {
 				return nil
 			}
+			abs, err := filepath.Abs(p)
+			if err != nil {
+				return goerr.Wrap(err, "failed to resolve policy path", goerr.V("path", p))
+			}
+			if seen[abs] {
+				return nil
+			}
+			seen[abs] = true
 			regoFiles = append(regoFiles, filepath.Clean(p))
 			return nil
 		})

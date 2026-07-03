@@ -75,6 +75,19 @@ func TestNewPolicyEngineNoPolicy(t *testing.T) {
 	gt.Error(t, err)
 }
 
+func TestNewPolicyEngineDeduplicatesOverlappingPaths(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "p.rego")
+	gt.NoError(t, os.WriteFile(path, []byte("package test\n\nallow contains \"x\" if { input.x == 1 }\n"), 0600))
+
+	abs, err := filepath.Abs(path)
+	gt.NoError(t, err)
+
+	// The directory, the relative file and its absolute form all resolve to the same
+	// module. Without dedup the compiler would fail with a duplicate-rule error.
+	gt.R1(goast.NewPolicyEngine(dir, path, abs)).NoError(t)
+}
+
 func TestNewPolicyEngineMissingPath(t *testing.T) {
 	// A path that does not exist makes WalkDir fail at the root; the error must be
 	// surfaced (wrapped), not silently treated as "no policy".
