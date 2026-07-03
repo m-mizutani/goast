@@ -1,6 +1,6 @@
 package goast
 
-fail[res] {
+fail contains res if {
     input.Kind == "ExprStmt"
     input.Node.X.Fun.X.Name == "fmt"
     input.Node.X.Fun.Sel.Name == "Println"

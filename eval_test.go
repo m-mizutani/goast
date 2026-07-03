@@ -9,16 +9,15 @@ import (
 
 	"github.com/m-mizutani/goast"
 	"github.com/m-mizutani/gt"
-	"github.com/m-mizutani/opac"
 )
 
-// stubEngine emulates the opac client by routing the query input through fn and
-// JSON-encoding the result into output, mirroring how opac decodes Rego output.
+// stubEngine emulates the policy engine by routing the query input through fn and
+// JSON-encoding the result into output, mirroring how the engine decodes Rego output.
 type stubEngine struct {
 	fn func(in any) (any, error)
 }
 
-func (s *stubEngine) Query(_ context.Context, _ string, input, output any, _ ...opac.QueryOption) error {
+func (s *stubEngine) Query(_ context.Context, _ string, input, output any) error {
 	result, err := s.fn(input)
 	if err != nil {
 		return err
@@ -65,7 +64,7 @@ func TestEval(t *testing.T) {
 	}}
 
 	g := goast.New(
-		goast.WithOpacClient(mock),
+		goast.WithPolicyEngine(mock),
 	)
 
 	fails := gt.R1(g.Eval("test.go", code)).NoError(t)
@@ -75,10 +74,10 @@ func TestEval(t *testing.T) {
 	gt.V(t, fails[0].Msg).Equal("eval_test")
 }
 
-// TestEvalWithRealPolicy exercises the real opac + OPA evaluation path (not the
-// stub) to guard the upgrade: opac loads the top-level opa/ast packages, which
-// default to Rego v0, so the existing v0-syntax policies under policy/ must keep
-// compiling and matching under OPA v1.x.
+// TestEvalWithRealPolicy exercises the real OPA evaluation path (not the stub) to
+// guard the Rego v1 enforcement: PolicyEngine compiles policies as ast.RegoV1, so
+// the v1-syntax policies under policy/ must compile and match without needing an
+// `import rego.v1` line.
 func TestEvalWithRealPolicy(t *testing.T) {
 	const code = `package main
 
@@ -88,9 +87,9 @@ func hello() {
 	fmt.Println("hello")
 }
 `
-	client := gt.R1(opac.New(opac.Files("policy/do_not_use_println.rego"))).NoError(t)
+	engine := gt.R1(goast.NewPolicyEngine("policy/do_not_use_println.rego")).NoError(t)
 
-	g := goast.New(goast.WithOpacClient(client))
+	g := goast.New(goast.WithPolicyEngine(engine))
 
 	fails := gt.R1(g.Eval("test.go", strings.NewReader(code))).NoError(t)
 	gt.A(t, fails).Required().Length(1)
@@ -119,7 +118,7 @@ func Add(a, b int) int {
 
 	t.Run("with ignore option", func(t *testing.T) {
 		g := goast.New(
-			goast.WithOpacClient(mock),
+			goast.WithPolicyEngine(mock),
 			goast.WithIgnoreAutoGen(),
 		)
 
@@ -131,7 +130,7 @@ func Add(a, b int) int {
 
 	t.Run("without ignore option", func(t *testing.T) {
 		g := goast.New(
-			goast.WithOpacClient(mock),
+			goast.WithPolicyEngine(mock),
 		)
 
 		fails := gt.R1(g.Eval("test.go", strings.NewReader(code))).NoError(t)

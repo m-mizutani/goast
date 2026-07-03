@@ -44,7 +44,7 @@ func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
 	callback := func(data *Node) error {
 		ctx := context.Background()
 		var out evalOutput
-		if err := x.opac.Query(ctx, evalQuery, data, &out); err != nil {
+		if err := x.engine.Query(ctx, evalQuery, data, &out); err != nil {
 			return goerr.Wrap(err, "failed to evaluate policy")
 		}
 

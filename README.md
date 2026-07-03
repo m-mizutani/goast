@@ -64,12 +64,12 @@ $ goast dump --line 6 examples/println/main.go | jq
 
 ### Write Rego policy
 
-Here is example of a policy to prohibit `fmt.Println`.
+Here is example of a policy to prohibit `fmt.Println`. Policies are evaluated as [Rego v1](https://www.openpolicyagent.org/docs/latest/v0-upgrade/), so rules use the `contains` / `if` keywords (no `import rego.v1` is required).
 
 ```rego
 package goast
 
-fail[res] {
+fail contains res if {
     input.Kind == "ExprStmt"
     input.Node.X.Fun.X.Name == "fmt"
     input.Node.X.Fun.Sel.Name == "Println"
