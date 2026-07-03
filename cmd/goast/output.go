@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"unicode"
 
@@ -53,7 +54,7 @@ func getLine(path string, line int) (string, error) {
 	}
 	defer func() {
 		if err := fd.Close(); err != nil {
-			logger.Warn("%s", err.Error())
+			logger.Warn("failed to close file", slog.Any("error", err))
 		}
 	}()
 
