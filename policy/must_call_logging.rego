@@ -1,8 +1,6 @@
 package goast
 
-import future.keywords.every
-
-fail[result] {
+fail contains result if {
     allowList = ["main"]
 
     input.Kind == "FuncDecl"

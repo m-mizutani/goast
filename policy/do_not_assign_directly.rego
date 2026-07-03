@@ -1,6 +1,6 @@
 package goast
 
-fail[result] {
+fail contains result if {
 	input.Kind == "AssignStmt"
 	rhs := input.Node.Rhs[_]
 	rhs.Type.Name == "User"
@@ -12,7 +12,7 @@ fail[result] {
 	}
 }
 
-fail[result] {
+fail contains result if {
 	input.Kind == "AssignStmt"
 	rhs := input.Node.Rhs[_]
 	rhs.Op == 17 # AND

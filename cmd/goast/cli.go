@@ -10,7 +10,6 @@ import (
 
 	"github.com/m-mizutani/goast"
 	"github.com/m-mizutani/goerr/v2"
-	"github.com/m-mizutani/opac"
 	"github.com/m-mizutani/zlog"
 	"github.com/reviewdog/reviewdog/proto/rdf"
 	"github.com/urfave/cli/v3"
@@ -248,13 +247,13 @@ func cmdEval() *cli.Command {
 			}
 
 			// policy
-			client, err := opac.New(opac.Files(policies...))
+			engine, err := goast.NewPolicyEngine(policies...)
 			if err != nil {
 				return goerr.Wrap(err, "failed to load policy", goerr.V("policies", policies))
 			}
 
 			goastOptions := []goast.Option{
-				goast.WithOpacClient(client),
+				goast.WithPolicyEngine(engine),
 				goast.WithInspectOptions(opt.Options()...),
 			}
 			if ignoreAutoGen {
