@@ -143,6 +143,17 @@ goast . dump -l 6 examples/println/main.go | opa eval -b ./policy/ -I data
 }
 ```
 
+## Claude Code Skill
+
+This repository also ships a [Claude Code](https://claude.com/claude-code) skill, `goast-policy`, that guides Claude through writing and testing goast Rego policies (input format, AST JSON shapes, `go/token` integer tables, rule recipes). Install it as a plugin:
+
+```
+/plugin marketplace add m-mizutani/goast
+/plugin install goast-policy@goast
+```
+
+Then ask Claude to write a goast policy (e.g. "write a goast policy that forbids fmt.Println"), or see [skills/goast-policy/SKILL.md](skills/goast-policy/SKILL.md) directly.
+
 ## License
 
 Apache License v2

@@ -1,0 +1,13 @@
+{
+  "name": "goast-policy",
+  "description": "Guide for writing goast Rego policies: AST input format, Rego v1 rule contract, recipes, and testing workflow",
+  "version": "0.1.0",
+  "author": {
+    "name": "Masayoshi Mizutani",
+    "url": "https://github.com/m-mizutani"
+  },
+  "homepage": "https://github.com/m-mizutani/goast",
+  "repository": "https://github.com/m-mizutani/goast",
+  "license": "Apache-2.0",
+  "keywords": ["goast", "rego", "opa", "go", "static-analysis", "lint"]
+}

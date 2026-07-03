@@ -1,0 +1,22 @@
+{
+  "name": "goast",
+  "owner": {
+    "name": "Masayoshi Mizutani",
+    "url": "https://github.com/m-mizutani"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for goast, the Go AST static analysis tool with Rego policies",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "goast-policy",
+      "source": "./",
+      "description": "Guide for writing goast Rego policies: AST input format, Rego v1 rule contract, recipes, and testing workflow",
+      "version": "0.1.0",
+      "license": "Apache-2.0",
+      "category": "development",
+      "keywords": ["goast", "rego", "opa", "go", "static-analysis", "lint"]
+    }
+  ]
+}
