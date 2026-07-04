@@ -179,43 +179,58 @@ Expected output on a match:
 evaluation input, so you can replay it:
 
 ```bash
-goast dump --line 6 sample.go | opa eval -b ./policy/ -I data.goast
+goast dump --line 6 sample.go | opa eval -b .goast -I data.goast
 ```
 
 If `fail` is empty, bisect the rule body: comment out conditions one by one,
 or `opa eval ... 'input.Node.Fun'` to inspect what the input actually holds
 at each path.
 
-**7. Run against the real tree, then wire into CI:**
+**7. Run against the real tree.** Once the rule works, keep it in your
+project's `.goast/` policy directory (layout under *Verifying and testing
+policies* below) and run goast over your source directories:
 
 ```bash
-goast eval -p ./policy ./...        # directories are walked recursively
-goast eval -p ./policy --fail .     # non-zero exit on violations (CI gate)
-goast eval -p ./policy -f json .    # Reviewdog Diagnostic Format (rdjson)
-goast eval -p ./policy --ignore-auto-generated .   # skip "Code generated" files
+goast eval -p .goast ./cmd ./internal            # walk these dirs recursively
+goast eval -p .goast --fail ./cmd ./internal     # non-zero exit on violations (CI gate)
+goast eval -p .goast -f json ./cmd ./internal    # rdjson (reviewdog Diagnostic Format)
+goast eval -p .goast --ignore-auto-generated ./cmd ./internal   # skip "Code generated" files
 ```
+
+goast takes filesystem paths (not Go's `./...` package pattern) and walks each
+recursively for `*.go`. It has **no exclude flag** and skips neither `testdata`
+nor dot-dirs, so a repo-root target (`.`) also lints the intentionally-
+violating fixtures under `.goast/testdata/` — pass your source directories
+instead. `--policy` (`-p`) is required and may be repeated; `--format` (`-f`)
+accepts only `text` (default) or `json`. See the **Wiring into CI** section for
+making this a required check.
 
 ## Verifying and testing policies
 
 Three layers, cheapest first. Use all three for policies that will gate CI.
 
 **1. End-to-end check with sample files.** Keep a known-violating and a
-known-compliant Go sample next to the policy and run both — a policy that
+known-compliant Go sample under `.goast/testdata/` and run both — a policy that
 never fires and a policy that fires on everything look identical if you only
 test one side:
 
 ```bash
-goast eval -p ./policy testdata/bad.go     # expect: Detected N violations
-goast eval -p ./policy testdata/good.go    # expect: Detected 0 violations
-goast eval -p ./policy --fail testdata/bad.go || echo "exit code is non-zero as expected"
+goast eval -p .goast .goast/testdata/no_println_bad.go    # expect: Detected N violations
+goast eval -p .goast .goast/testdata/no_println_good.go   # expect: Detected 0 violations
+goast eval -p .goast --fail .goast/testdata/no_println_bad.go || echo "exit code is non-zero as expected"
 ```
+
+Both samples are mandatory. `no_println_bad.go` holds the violation (invalid
+Go by your rule); `no_println_good.go` is the compliant counterpart (valid
+Go). Testing only the bad sample cannot catch a rule that fires on everything;
+testing only the good sample cannot catch a rule that never fires.
 
 **2. Replay the exact input with the opa CLI.** `goast dump` output is
 byte-for-byte the evaluation input, so any node can become a fixture:
 
 ```bash
-goast dump --line 6 testdata/bad.go > testdata/println_node.json
-opa eval -b ./policy -I 'data.goast.fail' < testdata/println_node.json
+goast dump --line 6 .goast/testdata/no_println_bad.go > .goast/testdata/println_node.json
+opa eval -b .goast -I 'data.goast.fail' < .goast/testdata/println_node.json
 ```
 
 **3. Unit tests with `opa test`.** Write `test_*` rules in `package goast`
@@ -246,26 +261,85 @@ test_sprintf_allowed if {
 ```
 
 ```bash
-opa test -v ./policy ./policy-test    # opa needs both dirs to compile the package
-opa check ./policy                    # quick syntax/compile lint (OPA v1)
+opa test -v .goast    # compiles the rule and its _test.rego together
+opa check .goast      # quick syntax/compile lint (OPA v1)
 ```
 
-Keep test files **outside** the directory passed to `goast eval -p`: goast
-walks it recursively and compiles every `.rego` it finds, so test rules would
-be re-evaluated on every AST node (only `fail` is read, but you pay the
-evaluation cost thousands of times). A layout that works:
+A `_test.rego` file carries its own fixtures via `with input as`, so it needs
+no real Go input and lives **right next to the rule it tests**, inside
+`.goast/`. goast reads only the `fail` set, so these `test_*` rules never
+contribute findings when `goast eval` compiles them alongside the rule —
+co-locating is safe. Keep the bad/good Go samples for layer 1 under
+`.goast/testdata/` (goast only collects `*.rego`, so the `.go` files are never
+loaded as policies). The layout:
 
 ```
-policy/               # goast eval -p ./policy
-    no_println.rego
-policy-test/          # opa test ./policy ./policy-test
-    no_println_test.rego
-    testdata/*.go     # bad/good samples for layer 1
+.goast/
+    no_println.rego         # goast eval -p .goast ./cmd ./internal
+    no_println_test.rego    # opa test -v .goast   (package goast, self-contained)
+    testdata/
+        no_println_bad.go   # invalid go — layer-1 sample (violates)
+        no_println_good.go  # valid go   — layer-1 sample (clean)
 ```
 
 Assert on the full result — `msg`, `pos`, and `sev` — at least once per rule;
 `pos` mistakes (wrong field, line number instead of offset) survive
 count-only tests and surface as findings pointing at the wrong line.
+
+## Wiring into CI
+
+goast is a single Go binary. Install it — pin a tag so CI is reproducible:
+
+```bash
+go install github.com/m-mizutani/goast/cmd/goast@latest   # or a pinned tag, e.g. @v0.2.0
+```
+
+Two facts about the exit code decide how you gate a build:
+
+- **Without `--fail`, goast exits 0 even when it prints violations** — it only
+  reports them. Pass `--fail` to turn any violation into a non-zero exit (the
+  gate).
+- A run-time error (unreadable policy, bad path) exits non-zero regardless of
+  `--fail`. Every non-zero exit is code `1`; there are no per-cause codes.
+
+A GitHub Actions job that unit-tests the policies (layer 3) and then gates your
+source directories. goast has **no exclude flag** and skips neither `testdata`
+nor dot-dirs, so lint your source dirs (e.g. `./cmd ./internal`), never the repo
+root, or it will also flag the intentionally-violating fixtures under
+`.goast/testdata/`:
+
+```yaml
+name: goast
+on: [pull_request]
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      # 1. Unit-test the policies
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: latest
+      - run: opa test -v .goast
+
+      # 2. Lint your source dirs; fail the job on any violation
+      - run: go install github.com/m-mizutani/goast/cmd/goast@v0.2.0   # pin a released tag
+      - run: goast eval -p .goast --fail ./cmd ./internal
+```
+
+**Inline PR comments via reviewdog (optional).** `-f json` writes the reviewdog
+Diagnostic Format (rdjson) to stdout. goast has no runtime dependency on
+reviewdog — it just emits the byte-compatible shape — so pipe it straight in
+(drop `--fail` and let reviewdog own the reporting):
+
+```bash
+goast eval -p .goast -f json ./cmd ./internal | reviewdog -f=rdjson -reporter=github-pr-review
+```
 
 ## Common recipes
 
@@ -316,4 +390,6 @@ Before shipping a policy, verify:
       `null` is **truthy** in Rego — write `input.Node.Doc == null` /
       `input.Node.Body != null`, never bare `input.Node.Body` or
       `not input.Node.Doc`.
-- [ ] Tested with both a violating and a compliant sample file.
+- [ ] Tested with **both** a violating and a compliant sample file
+      (`.goast/testdata/*_bad.go` and `.goast/testdata/*_good.go`), plus an `opa test` unit
+      test asserting `msg`/`pos`/`sev`.
