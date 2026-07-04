@@ -1,4 +1,4 @@
-# goast [![test](https://github.com/m-mizutani/goast/actions/workflows/test.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/test.yml)[![gosec](https://github.com/m-mizutani/goast/actions/workflows/gosec.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/gosec.yml) [![trivy](https://github.com/m-mizutani/goast/actions/workflows/trivy.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/trivy.yml)
+# goast [![test](https://github.com/m-mizutani/goast/actions/workflows/test.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/test.yml)[![goast](https://github.com/m-mizutani/goast/actions/workflows/goast.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/goast.yml)[![gosec](https://github.com/m-mizutani/goast/actions/workflows/gosec.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/gosec.yml) [![trivy](https://github.com/m-mizutani/goast/actions/workflows/trivy.yml/badge.svg)](https://github.com/m-mizutani/goast/actions/workflows/trivy.yml)
 
 Go [AST](https://pkg.go.dev/go/ast) (Abstract Syntax Tree) based static analysis tool with [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/).
 
@@ -118,6 +118,34 @@ Files are evaluated in parallel. `--workers, -w` (or `GOAST_WORKERS`) sets the n
 $ goast eval -p ./policy --workers 8 ./...
 ```
 
+By default `goast eval` also reads an `[eval]` section from `.goast.toml` in the
+current directory, so the policy, target paths, and output options can be
+committed once and a bare `goast eval` run in CI:
+
+```toml
+[eval]
+policy = ["policy"]                # policy file(s) or dir(s); always an array
+paths  = ["./cmd", "./internal"]   # evaluation targets used when no arguments are given
+fail   = true                      # non-zero exit on any violation (CI gate)
+# format = "json"                  # "text" (default) or "json"
+# output = "goast.rdjson"          # omit for stdout (the CLI "-" sentinel is not used in config)
+# ignore_auto_generated = true
+# workers = 8
+# object_depth = 0
+```
+
+```bash
+$ goast eval                       # policy and targets come from [eval]
+$ goast eval -f json ./cmd         # CLI flags/args override the config
+```
+
+CLI flags always win over the config, which wins over the built-in defaults
+(**CLI > `[eval]` > default**). Point at another file with `--config, -c` or the
+`GOAST_CONFIG` environment variable. If the default `.goast.toml` is absent,
+`eval` simply runs from CLI flags alone; an explicitly named `--config` that does
+not exist is an error. Paths (`policy`, `paths`) are always arrays — a single
+value is written as a one-element array.
+
 > **Note on evaluation internals.** `eval` queries the `fail` rule of the `goast` package directly (`data.goast.fail`). Other rules in your policy package — helper rules, and in particular the test rules in same-package `*_test.rego` files — are therefore not evaluated on every AST node, which is what keeps `eval` fast on large trees. This does not change which violations are reported: `fail` was always the only rule `eval` consumed.
 >
 > To break the one reference cycle in `go/ast` (`*ast.Object`), `eval` parses with object resolution skipped, so `input.Node.Scope`, `input.Node.Unresolved` and `*ast.Ident.Obj` are `null`. These fields are deprecated in `go/ast`; a policy that genuinely needs the object graph can request it with `--object-depth, -d` (which restores the classic resolve path).
@@ -138,28 +166,28 @@ to expect:
 
 ```toml
 [test]
-# Default policy applied to every case (a case may override it). A string or an
-# array of strings; a file or a directory (walked recursively for *.rego).
-policy = ".goast"
+# Default policy applied to every case (a case may override it). Always an array
+# of file or directory paths (directories are walked recursively for *.rego).
+policy = [".goast"]
 
 # The bad sample must trigger the rule.
 [[test.cases]]
 name   = "forbids fmt.Println"
-source = ".goast/testdata/no_println_bad.go"
+source = [".goast/testdata/no_println_bad.go"]
 expect = "fail"            # "pass" (0 violations) or "fail" (>0 violations)
 count  = 1                 # optional: assert the exact number of violations
 
 # The good sample must stay clean.
 [[test.cases]]
 name   = "allows fmt.Fprintf"
-source = ".goast/testdata/no_println_good.go"
+source = [".goast/testdata/no_println_good.go"]
 expect = "pass"
 
 # Pin the exact finding a specific policy produces.
 [[test.cases]]
 name   = "reports the exact line and message"
-policy = ".goast/no_println.rego"   # override the default policy for this case
-source = ".goast/testdata/no_println_bad.go"
+policy = [".goast/no_println.rego"]   # override the default policy for this case
+source = [".goast/testdata/no_println_bad.go"]
 
   [[test.cases.violations]]         # optional: each entry must match some finding
   line     = 6                      # every field here is optional...

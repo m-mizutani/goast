@@ -1,14 +1,14 @@
 [test]
-policy = "testdata/test/no_println.rego"
+policy = ["testdata/test/no_println.rego"]
 
 # This case is deliberately wrong: the bad sample violates the rule, so
 # expecting "pass" must make the suite fail.
 [[test.cases]]
 name = "wrongly expects the bad sample to pass"
-source = "testdata/test/no_println_bad.go"
+source = ["testdata/test/no_println_bad.go"]
 expect = "pass"
 
 [[test.cases]]
 name = "good sample is clean"
-source = "testdata/test/no_println_good.go"
+source = ["testdata/test/no_println_good.go"]
 expect = "pass"

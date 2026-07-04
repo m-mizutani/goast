@@ -3,12 +3,9 @@ package main
 import (
 	"bytes"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/BurntSushi/toml"
 	"github.com/m-mizutani/goast"
 	"github.com/m-mizutani/gt"
 )
@@ -109,164 +106,13 @@ func TestCheckCase(t *testing.T) {
 	}
 }
 
-func TestPathListUnmarshalTOML(t *testing.T) {
-	t.Run("single string decodes to one element", func(t *testing.T) {
-		var cfg testConfig
-		gt.NoError(t, tomlDecode(t, `
-[test]
-policy = ".goast"
-[[test.cases]]
-source = "a.go"
-expect = "pass"
-`, &cfg))
-		gt.A(t, cfg.Test.Policy).Equal(pathList{".goast"})
-	})
-
-	t.Run("array decodes to many elements", func(t *testing.T) {
-		var cfg testConfig
-		gt.NoError(t, tomlDecode(t, `
-[test]
-policy = [".goast", "extra.rego"]
-[[test.cases]]
-source = ["a.go", "b.go"]
-expect = "pass"
-`, &cfg))
-		gt.A(t, cfg.Test.Policy).Equal(pathList{".goast", "extra.rego"})
-		gt.A(t, cfg.Test.Cases[0].Source).Equal(pathList{"a.go", "b.go"})
-	})
-
-	t.Run("non-string array element is rejected", func(t *testing.T) {
-		var cfg testConfig
-		gt.NotNil(t, tomlDecode(t, `
-[test]
-policy = ["ok", 3]
-[[test.cases]]
-source = "a.go"
-expect = "pass"
-`, &cfg))
-	})
-}
-
-func TestLoadTestConfigValid(t *testing.T) {
-	t.Run("fixture pass suite loads and applies defaults", func(t *testing.T) {
-		cfg := gt.R1(loadTestConfig("testdata/test/pass_suite.toml")).NoError(t)
-		gt.A(t, cfg.Test.Cases).Length(3)
-		// The third case omits policy, so it must inherit the [test] default.
-		gt.A(t, cfg.Test.Cases[2].policyPaths(cfg.Test)).Equal([]string{"testdata/test/no_println.rego"})
-	})
-
-	t.Run("case policy overrides the section default", func(t *testing.T) {
-		cfg := gt.R1(loadTestConfig(writeConfig(t, `
-[test]
-policy = "default.rego"
-[[test.cases]]
-source = "a.go"
-policy = "case.rego"
-expect = "fail"
-`))).NoError(t)
-		gt.A(t, cfg.Test.Cases[0].policyPaths(cfg.Test)).Equal([]string{"case.rego"})
-	})
-}
-
-func TestLoadTestConfigInvalid(t *testing.T) {
-	cases := map[string]string{
-		"no cases": `
-[test]
-policy = "p.rego"
-`,
-		"case without source": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-expect = "fail"
-`,
-		"case without any policy": `
-[[test.cases]]
-source = "a.go"
-expect = "fail"
-`,
-		"invalid expect value": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-expect = "maybe"
-`,
-		"no assertion": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-`,
-		"expect pass conflicts with count": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-expect = "pass"
-count = 1
-`,
-		"expect pass conflicts with violations": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-expect = "pass"
-[[test.cases.violations]]
-line = 6
-`,
-		"expect fail conflicts with count zero": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-expect = "fail"
-count = 0
-`,
-		"count zero conflicts with violations": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-count = 0
-[[test.cases.violations]]
-line = 6
-`,
-		"negative count": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-count = -1
-`,
-		"empty violation entry": `
-[test]
-policy = "p.rego"
-[[test.cases]]
-source = "a.go"
-[[test.cases.violations]]
-`,
-		"toml syntax error": `
-[test
-policy = "p.rego"
-`,
-	}
-
-	for name, content := range cases {
-		t.Run(name, func(t *testing.T) {
-			_, err := loadTestConfig(writeConfig(t, content))
-			gt.NotNil(t, err)
-		})
-	}
-}
-
 // TestRunTestsPassSuite exercises the whole pipeline (config -> policy compile ->
 // eval real Go -> assertions) over a suite whose every case is correct.
 func TestRunTestsPassSuite(t *testing.T) {
-	cfg := gt.R1(loadTestConfig("testdata/test/pass_suite.toml")).NoError(t)
+	cfg := gt.R1(loadConfig("testdata/test/pass_suite.toml")).NoError(t)
 
 	var buf bytes.Buffer
-	gt.NoError(t, runTests(cfg, &buf))
+	gt.NoError(t, runTests(cfg.Test, &buf))
 
 	out := buf.String()
 	gt.V(t, strings.Contains(out, "3 cases: 3 passed, 0 failed")).Equal(true)
@@ -276,10 +122,10 @@ func TestRunTestsPassSuite(t *testing.T) {
 // failure and surfaces errTestFail (distinct from a setup error) without
 // aborting the remaining cases.
 func TestRunTestsFailSuite(t *testing.T) {
-	cfg := gt.R1(loadTestConfig("testdata/test/fail_suite.toml")).NoError(t)
+	cfg := gt.R1(loadConfig("testdata/test/fail_suite.toml")).NoError(t)
 
 	var buf bytes.Buffer
-	err := runTests(cfg, &buf)
+	err := runTests(cfg.Test, &buf)
 
 	gt.NotNil(t, err)
 	gt.V(t, errors.Is(err, errTestFail)).Equal(true)
@@ -310,42 +156,29 @@ func TestEngineCacheReuse(t *testing.T) {
 func TestRunTestsRepoRootConfig(t *testing.T) {
 	t.Chdir("../..") // move from cmd/goast to the repo root where .goast.toml lives
 
-	cfg := gt.R1(loadTestConfig(".goast.toml")).NoError(t)
+	cfg := gt.R1(loadConfig(".goast.toml")).NoError(t)
+	gt.NoError(t, cfg.Test.validate())
 
 	var buf bytes.Buffer
-	gt.NoError(t, runTests(cfg, &buf))
-	gt.V(t, strings.Contains(buf.String(), "3 cases: 3 passed, 0 failed")).Equal(true)
+	gt.NoError(t, runTests(cfg.Test, &buf))
+	gt.V(t, strings.Contains(buf.String(), "5 cases: 5 passed, 0 failed")).Equal(true)
 }
 
-// TestRunCasePolicyCompileError makes sure a broken policy is a hard error
-// (aborting the run), not a silently-failed case.
+// TestRunTestsPolicyError makes sure a broken policy is a hard error (aborting
+// the run), not a silently-failed case.
 func TestRunTestsPolicyError(t *testing.T) {
-	cfg := gt.R1(loadTestConfig(writeConfig(t, `
+	cfg := gt.R1(loadConfig(writeConfig(t, `
 [test]
-policy = "testdata/test/does_not_exist.rego"
+policy = ["testdata/test/does_not_exist.rego"]
 [[test.cases]]
-source = "testdata/test/no_println_bad.go"
+source = ["testdata/test/no_println_bad.go"]
 expect = "fail"
 `))).NoError(t)
 
 	var buf bytes.Buffer
-	err := runTests(cfg, &buf)
+	err := runTests(cfg.Test, &buf)
 
 	gt.NotNil(t, err)
 	// A missing/uncompilable policy is a setup error, not an assertion failure.
 	gt.V(t, errors.Is(err, errTestFail)).Equal(false)
-}
-
-// --- helpers ---
-
-func writeConfig(t *testing.T, content string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "cfg.toml")
-	gt.NoError(t, os.WriteFile(path, []byte(content), 0600))
-	return path
-}
-
-func tomlDecode(t *testing.T, content string, v any) error {
-	t.Helper()
-	return toml.Unmarshal([]byte(content), v)
 }

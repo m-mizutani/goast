@@ -1,30 +1,75 @@
-# goast's own policy tests. Run from the repository root with:
+# goast's own policy config, run from the repository root.
 #
-#     goast test
+#   goast eval    # lint goast's own source with goast's own policy (.goast/)
+#   goast test    # verify the policies against good/bad samples
 #
-# This dogfoods the `test` subcommand against the bundled example policy.
+# This genuinely dogfoods both subcommands. Paths are always arrays (a single
+# value is written as a one-element array).
+
+[eval]
+# goast lints itself with its own rule set in .goast/ (currently: no implicit
+# stdout printing — see .goast/no_stdout_print.rego).
+#
+# `cmd` is a clean subtree, so it is a bulk directory target: the rule skips
+# /testdata/ by Path, keeping it clean despite cmd/goast/testdata's intentional
+# violation fixtures. The root goast package files, however, sit at the repo root
+# next to examples/ and testdata/ (goast has no exclude flag and would walk them),
+# so they are listed explicitly. Add new root package files here to keep them
+# covered.
+policy = [".goast"]
+paths = [
+  "cmd",
+  "clone.go", "dump.go", "eval.go", "goast.go", "inspect.go",
+  "logger.go", "model.go", "policy.go", "sync.go",
+]
+fail = true
+
 [test]
-policy = "policy/do_not_use_println.rego"
+# Default policy for the cases below; individual cases override it where they
+# exercise the standalone teaching example under policy/.
+policy = [".goast"]
+
+# --- goast's own rule: no implicit stdout printing (.goast/no_stdout_print.rego) ---
 
 [[test.cases]]
-name = "flags fmt.Println with the right line, message and severity"
-source = "examples/println/main.go"
+name   = "flags the implicit-stdout fmt.Print family"
+source = [".goast/samples/no_stdout_print_bad.go"]
 expect = "fail"
-count = 1
+count  = 3
 
 [[test.cases.violations]]
-line = 6
-message = "do not use fmt.Println"
+message  = "do not use fmt.Print"
 severity = "ERROR"
 
 [[test.cases]]
-name = "auto-generated files are skipped when ignore_auto_generated is set"
-source = "examples/autogen/main.go"
+name   = "allows Fprint/Sprint to explicit writers"
+source = [".goast/samples/no_stdout_print_good.go"]
+expect = "pass"
+
+# --- the teaching example shipped for the README/skill (policy/) ---
+
+[[test.cases]]
+name   = "example policy flags fmt.Println with the right line and severity"
+policy = ["policy/do_not_use_println.rego"]
+source = ["examples/println/main.go"]
+expect = "fail"
+count  = 1
+
+[[test.cases.violations]]
+line     = 6
+message  = "do not use fmt.Println"
+severity = "ERROR"
+
+[[test.cases]]
+name   = "auto-generated files are skipped when ignore_auto_generated is set"
+policy = ["policy/do_not_use_println.rego"]
+source = ["examples/autogen/main.go"]
 ignore_auto_generated = true
 expect = "pass"
 
 [[test.cases]]
-name = "auto-generated files are still flagged by default"
-source = "examples/autogen/main.go"
+name   = "auto-generated files are still flagged by default"
+policy = ["policy/do_not_use_println.rego"]
+source = ["examples/autogen/main.go"]
 expect = "fail"
-count = 1
+count  = 1
