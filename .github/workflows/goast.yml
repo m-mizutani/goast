@@ -1,0 +1,24 @@
+name: goast
+
+# Dogfood: goast lints itself with its own policy in .goast/ and verifies that
+# policy against good/bad samples, using the [eval] and [test] sections of the
+# repo-root .goast.toml. If a new implicit-stdout fmt.Print* ever lands in the
+# linted source, `goast eval` exits non-zero and this job fails.
+
+on: [push]
+
+jobs:
+  goast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout upstream repo
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "1.26"
+      - name: Verify policies against samples (goast test)
+        run: go run ./cmd/goast test
+      - name: Lint goast with its own policy (goast eval)
+        run: go run ./cmd/goast eval
