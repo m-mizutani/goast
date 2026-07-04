@@ -44,9 +44,13 @@ func listGoFiles(codes []string) ([]string, error) {
 
 // evalFilesParallel evaluates files concurrently with a bounded worker pool and
 // returns the findings in the input (walk) order, so output is deterministic
-// regardless of worker scheduling. workers <= 0 means one worker per CPU. It is
-// fail-fast: on the first file error errgroup cancels the shared context and
-// Wait returns that error.
+// regardless of worker scheduling. workers <= 0 means one worker per CPU.
+//
+// Fail-fast: the first file error is what Wait returns, and once it occurs the
+// shared context is cancelled so files not yet started are skipped rather than
+// evaluated for nothing. Files already in flight when the error happens run to
+// completion — they are independent, so there is no partial work to unwind and
+// their results are discarded by the caller on error anyway.
 func evalFilesParallel(files []string, workers int, eval func(path string, r io.Reader) ([]*goast.Fail, error)) ([]*goast.Fail, error) {
 	if workers <= 0 {
 		workers = runtime.NumCPU()
@@ -54,11 +58,20 @@ func evalFilesParallel(files []string, workers int, eval func(path string, r io.
 
 	results := make([][]*goast.Fail, len(files))
 
-	grp, _ := errgroup.WithContext(context.Background())
+	grp, ctx := errgroup.WithContext(context.Background())
 	grp.SetLimit(workers)
 
 	for i, fpath := range files {
+		// A prior file has failed and cancelled ctx: stop scheduling more work.
+		if ctx.Err() != nil {
+			break
+		}
 		grp.Go(func() error {
+			// This file was scheduled just before the cancellation landed; skip
+			// it so the run winds down instead of evaluating it for nothing.
+			if ctx.Err() != nil {
+				return nil
+			}
 			fd, err := os.Open(fpath) // #nosec G304 -- fpath comes from the operator-supplied code paths; reading them is the tool's purpose
 			if err != nil {
 				return goerr.Wrap(err, "failed to open go file", goerr.V("path", fpath))

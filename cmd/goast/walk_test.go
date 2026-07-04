@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,6 +100,38 @@ func TestEvalFilesParallelFailFast(t *testing.T) {
 	// the offending path must be attached for diagnosis.
 	gt.V(t, errors.Is(err, sentinel)).Equal(true)
 	gt.V(t, goerr.Values(err)["path"]).Equal(filepath.Join(dir, "b.go"))
+}
+
+// With a single worker, files are processed strictly in order, so once one
+// fails the rest must be skipped (not evaluated) — the deterministic form of
+// the fail-fast contract.
+func TestEvalFilesParallelSkipsAfterErrorSerial(t *testing.T) {
+	dir := t.TempDir()
+	var files []string
+	for _, name := range []string{"a.go", "b.go", "c.go", "d.go", "e.go"} {
+		p := filepath.Join(dir, name)
+		gt.NoError(t, os.WriteFile(p, []byte("package x\n"), 0600))
+		files = append(files, p)
+	}
+
+	var mu sync.Mutex
+	var evaluated []string
+	sentinel := goerr.New("boom")
+	eval := func(path string, _ io.Reader) ([]*goast.Fail, error) {
+		mu.Lock()
+		evaluated = append(evaluated, filepath.Base(path))
+		mu.Unlock()
+		if filepath.Base(path) == "b.go" {
+			return nil, sentinel
+		}
+		return nil, nil
+	}
+
+	_, err := evalFilesParallel(files, 1, eval)
+	gt.Error(t, err)
+	gt.V(t, errors.Is(err, sentinel)).Equal(true)
+	// a and b were evaluated; the failure at b must stop c, d, e.
+	gt.V(t, evaluated).Equal([]string{"a.go", "b.go"})
 }
 
 // The parallel CLI path must detect exactly the same violations regardless of

@@ -156,7 +156,7 @@ func TestEvalGolden(t *testing.T) {
 
 	if os.Getenv("GOAST_UPDATE_GOLDEN") != "" {
 		raw := gt.R1(json.MarshalIndent(got, "", "  ")).NoError(t)
-		gt.NoError(t, os.WriteFile(goldenPath, append(raw, '\n'), 0644))
+		gt.NoError(t, os.WriteFile(goldenPath, append(raw, '\n'), 0600))
 	}
 
 	raw := gt.R1(os.ReadFile(goldenPath)).NoError(t)
