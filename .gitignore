@@ -3,3 +3,5 @@
 !.claude-plugin/*.json
 
 policy/data
+dist/
+licenses/
