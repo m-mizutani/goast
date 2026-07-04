@@ -132,8 +132,9 @@ pipeline (parse Go → walk AST → run Rego), so a passing test means `goast ev
 will behave the same way.
 
 By default `goast test` reads `.goast.toml` in the current directory (override
-with `--config, -c`). Each `[[test.cases]]` entry names the policy, the Go
-source to run it over, and what to expect:
+with `--config, -c`, or the `GOAST_CONFIG` environment variable). Each
+`[[test.cases]]` entry names the policy, the Go source to run it over, and what
+to expect:
 
 ```toml
 [test]
@@ -180,6 +181,11 @@ ok    reports the exact line and message  (1 violation)
 check pass/fail. Per-case `object_depth` and `ignore_auto_generated` mirror the
 matching `eval` flags. `goast test` exits non-zero if any case fails (or if the
 config or a policy cannot be loaded), so it works as a CI gate on its own.
+
+`policy` and `source` paths are resolved relative to the **current working
+directory** (not the config file's location), matching how `goast eval` takes
+paths. Keep the config at the repository root and run `goast test` from there —
+the intended CI usage.
 
 ### Debug
 

@@ -259,7 +259,9 @@ goast test -c policies.toml       # or point at another config
 Both the bad and good samples are mandatory — testing only the bad sample cannot
 catch a rule that fires on everything; testing only the good sample cannot catch
 a rule that never fires. Per-case `object_depth` / `ignore_auto_generated`
-mirror the matching `eval` flags. (You can still run the underlying checks by
+mirror the matching `eval` flags. `policy` / `source` paths resolve relative to
+the working directory (not the config file), so keep `.goast.toml` at the repo
+root and run `goast test` there. (You can still run the underlying checks by
 hand with `goast eval -p .goast .goast/testdata/no_println_bad.go`, but the
 config makes them a repeatable, exit-coded gate.)
 
