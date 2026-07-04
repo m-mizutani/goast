@@ -33,9 +33,13 @@ type rdjsonRange struct {
 	Start *rdjsonPosition `json:"start,omitempty"`
 }
 
+// Line and Column are plain int (goast.Fail already carries them as int). The
+// generated rdf types used int32, but since this struct is serialized with
+// encoding/json the on-the-wire number is identical either way, and int avoids
+// an int->int32 conversion that gosec flags as a potential overflow (G115).
 type rdjsonPosition struct {
-	Line   int32 `json:"line,omitempty"`
-	Column int32 `json:"column,omitempty"`
+	Line   int `json:"line,omitempty"`
+	Column int `json:"column,omitempty"`
 }
 
 // newRDJSONResult converts goast violations into an rdjson document tagged with
@@ -55,8 +59,8 @@ func newRDJSONResult(failCases []*goast.Fail) *rdjsonResult {
 				Path: fail.Path,
 				Range: &rdjsonRange{
 					Start: &rdjsonPosition{
-						Line:   int32(fail.Line),
-						Column: int32(fail.Column),
+						Line:   fail.Line,
+						Column: fail.Column,
 					},
 				},
 			},

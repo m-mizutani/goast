@@ -25,14 +25,14 @@ func TestNewRDJSONResult(t *testing.T) {
 		At(0, func(t testing.TB, d *rdjsonDiagnostic) {
 			gt.Equal(t, d.Message, "first violation")
 			gt.Equal(t, d.Location.Path, "foo.go")
-			gt.Equal(t, d.Location.Range.Start.Line, int32(10))
-			gt.Equal(t, d.Location.Range.Start.Column, int32(5))
+			gt.Equal(t, d.Location.Range.Start.Line, 10)
+			gt.Equal(t, d.Location.Range.Start.Column, 5)
 		}).
 		At(1, func(t testing.TB, d *rdjsonDiagnostic) {
 			gt.Equal(t, d.Message, "second violation")
 			gt.Equal(t, d.Location.Path, "bar/baz.go")
-			gt.Equal(t, d.Location.Range.Start.Line, int32(42))
-			gt.Equal(t, d.Location.Range.Start.Column, int32(1))
+			gt.Equal(t, d.Location.Range.Start.Line, 42)
+			gt.Equal(t, d.Location.Range.Start.Column, 1)
 		})
 }
 
