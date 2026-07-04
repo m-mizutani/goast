@@ -15,6 +15,7 @@ There are a lot of static analysis tools for Go language. They inspect Go source
 - Dump Go AST as JSON format (excluding ast.Object to avoid reference cycle)
 - Evaluate Go source code with Rego policy
 - Output the evaluation result as text or JSON format (compatible with [reviewdog](https://github.com/reviewdog/reviewdog))
+- Test your policies against sample Go files declaratively with a `.goast.toml` config (`goast test`)
 
 ## Usage
 
@@ -120,6 +121,71 @@ $ goast eval -p ./policy --workers 8 ./...
 > **Note on evaluation internals.** `eval` queries the `fail` rule of the `goast` package directly (`data.goast.fail`). Other rules in your policy package — helper rules, and in particular the test rules in same-package `*_test.rego` files — are therefore not evaluated on every AST node, which is what keeps `eval` fast on large trees. This does not change which violations are reported: `fail` was always the only rule `eval` consumed.
 >
 > To break the one reference cycle in `go/ast` (`*ast.Object`), `eval` parses with object resolution skipped, so `input.Node.Scope`, `input.Node.Unresolved` and `*ast.Ident.Obj` are `null`. These fields are deprecated in `go/ast`; a policy that genuinely needs the object graph can request it with `--object-depth, -d` (which restores the classic resolve path).
+
+### Test policies
+
+Writing a policy is only half the job — you also need to confirm it fires on the
+code it should and stays quiet on the code it should not. The `test` subcommand
+runs your policies against sample Go files and checks the result against
+expectations you declare in a TOML config. It exercises the **real** evaluation
+pipeline (parse Go → walk AST → run Rego), so a passing test means `goast eval`
+will behave the same way.
+
+By default `goast test` reads `.goast.toml` in the current directory (override
+with `--config, -c`, or the `GOAST_CONFIG` environment variable). Each
+`[[test.cases]]` entry names the policy, the Go source to run it over, and what
+to expect:
+
+```toml
+[test]
+# Default policy applied to every case (a case may override it). A string or an
+# array of strings; a file or a directory (walked recursively for *.rego).
+policy = ".goast"
+
+# The bad sample must trigger the rule.
+[[test.cases]]
+name   = "forbids fmt.Println"
+source = ".goast/testdata/no_println_bad.go"
+expect = "fail"            # "pass" (0 violations) or "fail" (>0 violations)
+count  = 1                 # optional: assert the exact number of violations
+
+# The good sample must stay clean.
+[[test.cases]]
+name   = "allows fmt.Fprintf"
+source = ".goast/testdata/no_println_good.go"
+expect = "pass"
+
+# Pin the exact finding a specific policy produces.
+[[test.cases]]
+name   = "reports the exact line and message"
+policy = ".goast/no_println.rego"   # override the default policy for this case
+source = ".goast/testdata/no_println_bad.go"
+
+  [[test.cases.violations]]         # optional: each entry must match some finding
+  line     = 6                      # every field here is optional...
+  message  = "do not use fmt.Println"   # ...message is a substring match
+  severity = "ERROR"                # ...severity is case-insensitive
+```
+
+```bash
+$ goast test
+ok    forbids fmt.Println  (1 violation)
+ok    allows fmt.Fprintf  (0 violations)
+ok    reports the exact line and message  (1 violation)
+
+3 cases: 3 passed, 0 failed
+```
+
+`count` and each `violations` field are optional refinements on top of
+`expect` — specify them when you want to pin the exact result, omit them to only
+check pass/fail. Per-case `object_depth` and `ignore_auto_generated` mirror the
+matching `eval` flags. `goast test` exits non-zero if any case fails (or if the
+config or a policy cannot be loaded), so it works as a CI gate on its own.
+
+`policy` and `source` paths are resolved relative to the **current working
+directory** (not the config file's location), matching how `goast eval` takes
+paths. Keep the config at the repository root and run `goast test` from there —
+the intended CI usage.
 
 ### Debug
 

@@ -1,0 +1,24 @@
+# Paths are relative to the working directory of `go test` (the cmd/goast
+# package dir), which is where this fixture is evaluated.
+[test]
+policy = "testdata/test/no_println.rego"
+
+[[test.cases]]
+name = "bad sample triggers the rule"
+source = "testdata/test/no_println_bad.go"
+expect = "fail"
+count = 1
+
+[[test.cases]]
+name = "good sample is clean"
+source = "testdata/test/no_println_good.go"
+expect = "pass"
+
+[[test.cases]]
+name = "reports the exact line and message"
+source = "testdata/test/no_println_bad.go"
+
+[[test.cases.violations]]
+line = 6
+message = "do not use fmt.Println"
+severity = "ERROR"

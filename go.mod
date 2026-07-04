@@ -3,6 +3,7 @@ module github.com/m-mizutani/goast
 go 1.26
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/fatih/color v1.19.0
 	github.com/m-mizutani/clog v0.2.1
 	github.com/m-mizutani/goerr/v2 v2.0.1
