@@ -69,8 +69,6 @@ github.com/m-mizutani/goerr/v2 v2.0.1 h1:Z0XZiliOcCw/qoPR8dEle0xMQw781UmvlySbDHE
 github.com/m-mizutani/goerr/v2 v2.0.1/go.mod h1:Ax59zs+j3NmzB/mPLc1w3g4yIutdrwcY7cB6IRO18EU=
 github.com/m-mizutani/gt v0.2.1 h1:mOl1PPIgEHoW2rQgqkfE31OGID06dO2uly8X8kvOEVY=
 github.com/m-mizutani/gt v0.2.1/go.mod h1:0MPYSfGBLmYjTduzADVmIqD58ELQ5IfBFiK/f0FmB3k=
-github.com/m-mizutani/opac v0.2.2 h1:Ox9RE8ucCcfy7pEXwooe8x63UJDlEBwgjRwrk0ghaAg=
-github.com/m-mizutani/opac v0.2.2/go.mod h1:kaw3SEH+WnJLkda4LYCdiSSA0mCYasdmjh5AreNUHkE=
 github.com/mattn/go-colorable v0.1.14 h1:9A9LHSqF/7dyVVX6g0U9cwm9pG3kP9gSzcuIPHPsaIE=
 github.com/mattn/go-colorable v0.1.14/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
@@ -94,8 +92,6 @@ github.com/prometheus/procfs v0.20.1 h1:XwbrGOIplXW/AU3YhIhLODXMJYyC1isLFfYCsTEy
 github.com/prometheus/procfs v0.20.1/go.mod h1:o9EMBZGRyvDrSPH1RqdxhojkuXstoe4UlK79eF5TGGo=
 github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 h1:bsUq1dX0N8AOIL7EB/X911+m4EHsnWEHeJ0c+3TTBrg=
 github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
-github.com/reviewdog/reviewdog v0.21.0 h1:0q/s3LqFnmBJt0OuMLXUjNdj5LwwkV0ZAwIwcqycV6E=
-github.com/reviewdog/reviewdog v0.21.0/go.mod h1:biRl2wUowE26OdHxMcTieKvSQ7BVXQC6Uufr0tJHNVU=
 github.com/rogpeppe/go-internal v1.15.0 h1:D0RCU5rMAp+SpgkiNdrjfJ+LX4J1M32V2NeCY7EJ6hc=
 github.com/rogpeppe/go-internal v1.15.0/go.mod h1:DrUVZyrJU+txYW5/1kwtXQSMFio52ZOxX7yM1VHvnxs=
 github.com/segmentio/asm v1.2.1 h1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=

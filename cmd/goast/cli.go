@@ -11,7 +11,6 @@ import (
 
 	"github.com/m-mizutani/goast"
 	"github.com/m-mizutani/goerr/v2"
-	"github.com/reviewdog/reviewdog/proto/rdf"
 	"github.com/urfave/cli/v3"
 )
 
@@ -282,27 +281,7 @@ func cmdEval() *cli.Command {
 				fmt.Fprintf(w, "\n\tDetected %d violations\n\n", len(failCases))
 
 			case outputJSON:
-				diagnosis := &rdf.DiagnosticResult{
-					Source: &rdf.Source{
-						Name: "goast",
-						Url:  "https://github.com/m-mizutani/goast",
-					},
-				}
-
-				for _, fail := range failCases {
-					diagnosis.Diagnostics = append(diagnosis.Diagnostics, &rdf.Diagnostic{
-						Message: fail.Msg,
-						Location: &rdf.Location{
-							Path: fail.Path,
-							Range: &rdf.Range{
-								Start: &rdf.Position{
-									Line:   int32(fail.Line),
-									Column: int32(fail.Column),
-								},
-							},
-						},
-					})
-				}
+				diagnosis := newRDJSONResult(failCases)
 
 				if err := json.NewEncoder(w).Encode(diagnosis); err != nil {
 					return goerr.Wrap(err, "failed to convert DiagnosticResult")
