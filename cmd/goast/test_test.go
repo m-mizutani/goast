@@ -286,6 +286,24 @@ func TestRunTestsFailSuite(t *testing.T) {
 	gt.V(t, strings.Contains(buf.String(), "2 cases: 1 passed, 1 failed")).Equal(true)
 }
 
+// TestEngineCacheReuse pins the non-obvious cache behavior: the same set of
+// policy paths — even given in a different order — must share one compiled
+// engine, while a different set must not.
+func TestEngineCacheReuse(t *testing.T) {
+	ec := newEngineCache()
+	a := "testdata/test/no_println.rego"
+	b := "testdata/test/no_print.rego"
+
+	e1 := gt.R1(ec.get([]string{a, b})).NoError(t)
+	// Same set, reversed order: the sorted key must resolve to the same engine.
+	e2 := gt.R1(ec.get([]string{b, a})).NoError(t)
+	gt.V(t, e1 == e2).Equal(true)
+
+	// A different set must compile (and cache) a distinct engine.
+	e3 := gt.R1(ec.get([]string{a})).NoError(t)
+	gt.V(t, e1 == e3).Equal(false)
+}
+
 // TestRunTestsRepoRootConfig runs the repository's own .goast.toml end-to-end
 // from the repo root, so the shipped dogfooding config (and the example policy it
 // points at) stays green. It also covers the default config path the CLI uses.
