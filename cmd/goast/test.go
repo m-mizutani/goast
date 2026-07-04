@@ -459,11 +459,9 @@ func cmdTest() *cli.Command {
 			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
-				// GOAST_CONFIG is the generic name so other subcommands can adopt
-				// the same env var later. GOAST_TEST_CONFIG is kept as a lower-
-				// priority alias so anyone who already set it keeps working; drop
-				// it once no one relies on it. EnvVars picks the first name set.
-				Sources:     cli.EnvVars("GOAST_CONFIG", "GOAST_TEST_CONFIG"),
+				// Generic name (not test-specific) so other subcommands can adopt
+				// the same env var later without a breaking rename.
+				Sources:     cli.EnvVars("GOAST_CONFIG"),
 				Destination: &config,
 				Value:       ".goast.toml",
 				Usage:       "Path to the test config TOML file",
