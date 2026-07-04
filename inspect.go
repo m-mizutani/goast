@@ -27,6 +27,13 @@ type inspectOptions struct {
 	RootOnly    bool
 
 	viewedLine map[int]struct{}
+
+	// skipClone hands the raw ast.Node to the callback instead of a reflection
+	// deep-copy. It is only safe when the file was parsed with
+	// parser.SkipObjectResolution: clone() exists solely to strip the *ast.Object
+	// graph (the one reference cycle in go/ast) so the node can be JSON-encoded,
+	// and with object resolution skipped there is no such graph to strip.
+	skipClone bool
 }
 
 func (x *inspectOptions) shouldInspect(n ast.Node, fs *token.FileSet) bool {
@@ -90,55 +97,63 @@ func Inspect(f *ast.File, fSet *token.FileSet, cb callback, options ...InspectOp
 		f(option)
 	}
 
+	return inspect(f, fSet, cb, option)
+}
+
+// inspect is the shared body of Inspect and the fast path in Eval. Callers that
+// pre-build inspectOptions (e.g. to decide the parser mode from ObjectDepth
+// before parsing) use this directly to avoid rebuilding the options.
+func inspect(f *ast.File, fSet *token.FileSet, cb callback, option *inspectOptions) error {
 	ctx := newCloneContext()
 	ctx.objectDepth = option.ObjectDepth
 
 	pos := fSet.Position(f.Pos())
 	filePath := pos.Filename
 
-	if option.RootOnly {
-		obj := clone(ctx, reflect.ValueOf(f))
+	// nodeFor produces the *Node handed to the callback: the raw node when
+	// cloning is skipped, otherwise a stripped deep-copy.
+	nodeFor := func(n ast.Node) (*Node, error) {
+		if option.skipClone {
+			return newNode(filePath, n, fSet), nil
+		}
+		obj := clone(ctx, reflect.ValueOf(n))
 		output, ok := obj.Interface().(ast.Node)
 		if !ok {
-			return goerr.New("consistency error, obj must be *ast.File")
+			return nil, goerr.New("consistency error, obj must be ast.Node")
 		}
-
-		node := newNode(filePath, output, fSet)
-
-		if err := cb(node); err != nil {
-			return err
-		}
-	} else {
-		var cbErr error
-		ast.Inspect(f, func(n ast.Node) bool {
-			if n == nil {
-				return true
-			}
-			if !option.shouldInspect(n, fSet) {
-				return true
-			}
-
-			obj := clone(ctx, reflect.ValueOf(n))
-			output, ok := obj.Interface().(ast.Node)
-			if !ok {
-				cbErr = goerr.New("consistency error, obj must be *ast.File")
-				return false
-			}
-
-			node := newNode(filePath, output, fSet)
-
-			if err := cb(node); err != nil {
-				cbErr = err
-				return false
-			}
-
-			return true
-		})
-
-		if cbErr != nil {
-			return cbErr
-		}
+		return newNode(filePath, output, fSet), nil
 	}
 
-	return nil
+	if option.RootOnly {
+		node, err := nodeFor(f)
+		if err != nil {
+			return err
+		}
+		return cb(node)
+	}
+
+	var cbErr error
+	ast.Inspect(f, func(n ast.Node) bool {
+		if n == nil {
+			return true
+		}
+		if !option.shouldInspect(n, fSet) {
+			return true
+		}
+
+		node, err := nodeFor(n)
+		if err != nil {
+			cbErr = err
+			return false
+		}
+
+		if err := cb(node); err != nil {
+			cbErr = err
+			return false
+		}
+
+		return true
+	})
+
+	return cbErr
 }

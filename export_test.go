@@ -6,9 +6,6 @@ import (
 )
 
 type FailCase failCase
-type EvalOutput struct {
-	Fail []*FailCase `json:"fail"`
-}
 
 func WithCreateFunc(f func(path string) (io.WriteCloser, error)) Option {
 	return func(g *Goast) {

@@ -1,0 +1,181 @@
+{
+  "default": [
+    {
+      "Path": "testdata/eval/src/assign.go",
+      "Line": 10,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/assign.go",
+      "Line": 14,
+      "Column": 3,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/autogen.go",
+      "Line": 8,
+      "Column": 2,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 6,
+      "Column": 2,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 7,
+      "Column": 2,
+      "Msg": "do not use fmt.Printf",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 8,
+      "Column": 2,
+      "Msg": "do not use the builtin print()",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 15,
+      "Column": 4,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/deep.go",
+      "Line": 29,
+      "Column": 5,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 10,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 14,
+      "Column": 19,
+      "Msg": "exported function \"Describe\" must take context.Context first",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 18,
+      "Column": 6,
+      "Msg": "exported function \"Execute\" must take context.Context first",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 19,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 28,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    }
+  ],
+  "ignore_auto_gen": [
+    {
+      "Path": "testdata/eval/src/assign.go",
+      "Line": 10,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/assign.go",
+      "Line": 14,
+      "Column": 3,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 6,
+      "Column": 2,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 7,
+      "Column": 2,
+      "Msg": "do not use fmt.Printf",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 8,
+      "Column": 2,
+      "Msg": "do not use the builtin print()",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/calls.go",
+      "Line": 15,
+      "Column": 4,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/deep.go",
+      "Line": 29,
+      "Column": 5,
+      "Msg": "do not use fmt.Println",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 10,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 14,
+      "Column": 19,
+      "Msg": "exported function \"Describe\" must take context.Context first",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 18,
+      "Column": 6,
+      "Msg": "exported function \"Execute\" must take context.Context first",
+      "Sev": "ERROR"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 19,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    },
+    {
+      "Path": "testdata/eval/src/funcs.go",
+      "Line": 28,
+      "Column": 2,
+      "Msg": "do not assign to the blank identifier",
+      "Sev": "WARNING"
+    }
+  ]
+}

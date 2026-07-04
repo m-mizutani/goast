@@ -11,6 +11,7 @@ import (
 	"github.com/m-mizutani/goerr/v2"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/topdown"
 )
 
 // PolicyEngine compiles and evaluates Rego policies. Unlike a default OPA/opac
@@ -26,6 +27,15 @@ type PolicyEngine struct {
 	// the query just once and only swapping the input keeps the per-node cost down.
 	mu       sync.Mutex
 	prepared map[string]rego.PreparedEvalQuery
+
+	// cancel is a single, never-fired Cancel shared across all Eval calls. Passing
+	// it via rego.EvalExternalCancel stops OPA from spawning a per-eval goroutine
+	// (plus channel) to watch ctx for cancellation — a cost that dominates once the
+	// actual rule evaluation is cheap (a few microseconds per node). It is only an
+	// atomic flag, so sharing one instance across concurrent Eval calls is safe; we
+	// never call Cancel() on it. Context cancellation is instead honored per node by
+	// checking ctx at the top of Query.
+	cancel topdown.Cancel
 }
 
 // NewPolicyEngine reads every .rego file under the given file or directory paths
@@ -89,6 +99,7 @@ func NewPolicyEngine(paths ...string) (*PolicyEngine, error) {
 	return &PolicyEngine{
 		compiler: compiler,
 		prepared: map[string]rego.PreparedEvalQuery{},
+		cancel:   topdown.NewCancel(),
 	}, nil
 }
 
@@ -96,12 +107,20 @@ func NewPolicyEngine(paths ...string) (*PolicyEngine, error) {
 // value into output via JSON. It mirrors how opac decodes Rego output so that the
 // only behavioral change from the previous opac-based path is the forced Rego v1.
 func (e *PolicyEngine) Query(ctx context.Context, query string, input, output any) error {
+	// With rego.EvalExternalCancel below, OPA no longer watches ctx for
+	// cancellation mid-evaluation. Query runs once per AST node, so checking ctx
+	// here gives cancellation at node granularity, which is the finest the caller
+	// (Eval, looping over nodes) can act on anyway.
+	if err := ctx.Err(); err != nil {
+		return goerr.Wrap(err, "context done before policy evaluation", goerr.V("query", query))
+	}
+
 	pq, err := e.preparedQuery(ctx, query)
 	if err != nil {
 		return err
 	}
 
-	rs, err := pq.Eval(ctx, rego.EvalInput(input))
+	rs, err := pq.Eval(ctx, rego.EvalInput(input), rego.EvalExternalCancel(e.cancel))
 	if err != nil {
 		return goerr.Wrap(err, "failed to evaluate query", goerr.V("query", query))
 	}

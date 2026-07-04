@@ -1,6 +1,7 @@
 .vscode
 *.json
 !.claude-plugin/*.json
+!testdata/**/*.json
 
 policy/data
 dist/
