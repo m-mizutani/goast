@@ -2,6 +2,7 @@ package goast_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -68,6 +69,31 @@ allow contains msg if {
 	// input.x != 1, so the rule does not fire and output stays empty (no error).
 	gt.NoError(t, engine.Query(context.Background(), "data.test", map[string]any{"x": 2}, &out))
 	gt.A(t, out.Allow).Length(0)
+}
+
+// Query must honor a cancelled context. Since the engine passes an external
+// Cancel to OPA (to avoid a per-eval goroutine), it checks the context itself
+// at the top of Query; a context cancelled before the call must surface as an
+// error rather than silently evaluating.
+func TestPolicyEngineQueryRespectsCancelledContext(t *testing.T) {
+	path := writePolicyFile(t, `package test
+
+allow contains msg if {
+	input.x == 1
+	msg := "ok"
+}
+`)
+	engine := gt.R1(goast.NewPolicyEngine(path)).NoError(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var out struct {
+		Allow []string `json:"allow"`
+	}
+	err := engine.Query(ctx, "data.test", map[string]any{"x": 1}, &out)
+	gt.Error(t, err)
+	gt.V(t, errors.Is(err, context.Canceled)).Equal(true)
 }
 
 func TestNewPolicyEngineNoPolicy(t *testing.T) {

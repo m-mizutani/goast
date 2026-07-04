@@ -28,8 +28,10 @@ interface fields).
 2. Parses each file (comments included) into an AST.
 3. Visits **every node recursively** (`ast.Inspect` order: the `File` node
    first, then declarations, statements, expressions, down to identifiers).
-4. For **each node**, evaluates the query `data.goast` with the node as
-   `input`, and collects the `fail` set.
+4. For **each node**, evaluates the query `data.goast.fail` with the node as
+   `input`, and collects the resulting `fail` set. (Only the `fail` rule is
+   evaluated — other rules in the package, including test rules in same-package
+   `*_test.rego` files, are not run per node.)
 
 Consequences that shape how you write rules:
 
@@ -96,8 +98,9 @@ fail contains res if {
 }
 ```
 
-- Package name must be `goast`. goast queries `data.goast` and reads only the
-  `fail` set; helper rules and functions in the same package are fine.
+- Package name must be `goast`. goast queries `data.goast.fail` and reads only
+  the `fail` set; helper rules and functions in the same package are fine (they
+  are evaluated only as `fail` needs them, not on their own per node).
 - Each violation is an object with exactly these keys:
   - `msg` (string) — the message shown to the user.
   - `pos` (integer) — copy a `*Pos` field from the matched node, pointing at

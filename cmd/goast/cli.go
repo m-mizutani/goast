@@ -176,6 +176,7 @@ func cmdEval() *cli.Command {
 		fail          bool
 		opt           inspectOptions
 		ignoreAutoGen bool
+		workers       int
 	)
 
 	return &cli.Command{
@@ -213,6 +214,14 @@ func cmdEval() *cli.Command {
 				Name:        "ignore-auto-generated",
 				Destination: &ignoreAutoGen,
 				Usage:       "Ignore auto generated go code file",
+			},
+			&cli.IntFlag{
+				Name:        "workers",
+				Aliases:     []string{"w"},
+				Sources:     cli.EnvVars("GOAST_WORKERS"),
+				Destination: &workers,
+				Value:       0,
+				Usage:       "Number of files evaluated in parallel (0 = number of CPUs)",
 			},
 		}, opt.Flags()...),
 		Action: func(ctx context.Context, c *cli.Command) error {
@@ -257,16 +266,13 @@ func cmdEval() *cli.Command {
 
 			g := goast.New(goastOptions...)
 
-			var failCases []*goast.Fail
+			fileList, err := listGoFiles(files)
+			if err != nil {
+				return err
+			}
 
-			if err := walkCode(files, func(filePath string, r io.Reader) error {
-				resp, err := g.Eval(filePath, r)
-				if err != nil {
-					return err
-				}
-				failCases = append(failCases, resp...)
-				return nil
-			}); err != nil {
+			failCases, err := evalFilesParallel(fileList, workers, g.Eval)
+			if err != nil {
 				return err
 			}
 

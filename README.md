@@ -111,6 +111,16 @@ $ goast eval -p ./policy/do_not_use_println.rego examples/println/main.go
 
 `--format, -f` option can specify output format `text` or `json`. JSON schema is according to [Reviewdog Diagnostic Format](https://github.com/reviewdog/reviewdog/tree/master/proto/rdf#rdjson).
 
+Files are evaluated in parallel. `--workers, -w` (or `GOAST_WORKERS`) sets the number of files evaluated concurrently; `0` (the default) uses one worker per CPU, and `1` forces sequential evaluation. The order of reported violations is deterministic (source walk order) regardless of the worker count.
+
+```bash
+$ goast eval -p ./policy --workers 8 ./...
+```
+
+> **Note on evaluation internals.** `eval` queries the `fail` rule of the `goast` package directly (`data.goast.fail`). Other rules in your policy package — helper rules, and in particular the test rules in same-package `*_test.rego` files — are therefore not evaluated on every AST node, which is what keeps `eval` fast on large trees. This does not change which violations are reported: `fail` was always the only rule `eval` consumed.
+>
+> To break the one reference cycle in `go/ast` (`*ast.Object`), `eval` parses with object resolution skipped, so `input.Node.Scope`, `input.Node.Unresolved` and `*ast.Ident.Obj` are `null`. These fields are deprecated in `go/ast`; a policy that genuinely needs the object graph can request it with `--object-depth, -d` (which restores the classic resolve path).
+
 ### Debug
 
 Also, you can use original `opa` command to debug policy. A schema of `dump` output is same with one to be evaluated. Then, `opa` command can use it with Rego file(s). An example is following.

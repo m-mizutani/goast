@@ -11,18 +11,21 @@ import (
 	"github.com/m-mizutani/goerr/v2"
 )
 
-// evalQuery is the Rego query Eval runs against the loaded policies. It matches
-// the "goast" package the CLI compiles policies into.
-const evalQuery = "data.goast"
+// evalQuery is the Rego query Eval runs against the loaded policies. It targets
+// the "fail" rule of the "goast" package directly, rather than the whole
+// "data.goast" document. Querying the package document would force OPA to
+// materialize every rule in the package on every AST node — helper rules,
+// constant sets, and, crucially, the test rules that live in same-package
+// *_test.rego files. On a large tree that is millions of pointless rule
+// evaluations. Since Eval only ever consumes the "fail" set, asking for exactly
+// that keeps behavior identical while cutting the per-node cost by orders of
+// magnitude.
+const evalQuery = "data.goast.fail"
 
 type failCase struct {
 	Msg string `json:"msg"`
 	Pos int    `json:"pos"`
 	Sev string `json:"sev"`
-}
-
-type evalOutput struct {
-	Fail []*failCase `json:"fail"`
 }
 
 var generatedCodePattern = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
@@ -43,12 +46,12 @@ func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
 
 	callback := func(data *Node) error {
 		ctx := context.Background()
-		var out evalOutput
+		var out []*failCase
 		if err := x.engine.Query(ctx, evalQuery, data, &out); err != nil {
 			return goerr.Wrap(err, "failed to evaluate policy")
 		}
 
-		for _, fail := range out.Fail {
+		for _, fail := range out {
 			pos := data.Pos(token.Pos(fail.Pos))
 
 			fails = append(fails, &Fail{
@@ -62,8 +65,24 @@ func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
 		return nil
 	}
 
+	option := newInspectOptions()
+	for _, o := range x.inspectOpt {
+		o(option)
+	}
+
+	mode := parser.Mode(parser.ParseComments)
+	if option.ObjectDepth <= 0 {
+		// Nothing downstream needs the *ast.Object graph (that is exactly what
+		// ObjectDepth > 0 would request), so skip object resolution. This removes
+		// go/ast's only reference cycle, which in turn lets inspect hand raw nodes
+		// to the policy instead of a per-node reflection deep-copy. On a large
+		// tree the copy is a meaningful share of the work.
+		mode |= parser.SkipObjectResolution
+		option.skipClone = true
+	}
+
 	fSet := token.NewFileSet()
-	f, err := parser.ParseFile(fSet, filePath, r, parser.ParseComments)
+	f, err := parser.ParseFile(fSet, filePath, r, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +91,7 @@ func (x *Goast) Eval(filePath string, r io.Reader) ([]*Fail, error) {
 		return nil, nil
 	}
 
-	if err := Inspect(f, fSet, callback, x.inspectOpt...); err != nil {
+	if err := inspect(f, fSet, callback, option); err != nil {
 		return nil, err
 	}
 
