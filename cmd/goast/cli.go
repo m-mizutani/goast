@@ -54,6 +54,7 @@ func run(args []string) error {
 			cmdEval(),
 			cmdDump(),
 			cmdSync(),
+			cmdTest(),
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			level, err := parseLogLevel(logLevel)

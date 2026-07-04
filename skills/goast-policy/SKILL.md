@@ -212,21 +212,56 @@ making this a required check.
 
 Three layers, cheapest first. Use all three for policies that will gate CI.
 
-**1. End-to-end check with sample files.** Keep a known-violating and a
-known-compliant Go sample under `.goast/testdata/` and run both — a policy that
-never fires and a policy that fires on everything look identical if you only
-test one side:
+**1. End-to-end tests with `goast test`.** This is the primary layer: it runs
+your policy against sample Go files through the **real** goast pipeline (parse →
+walk AST → Rego) and checks the result against expectations you declare in a
+`.goast.toml` at the repo root. Unlike the `opa test` layer below, it exercises
+the actual Go parsing, so a green run means `goast eval` behaves the same way.
 
-```bash
-goast eval -p .goast .goast/testdata/no_println_bad.go    # expect: Detected N violations
-goast eval -p .goast .goast/testdata/no_println_good.go   # expect: Detected 0 violations
-goast eval -p .goast --fail .goast/testdata/no_println_bad.go || echo "exit code is non-zero as expected"
+Keep a known-violating and a known-compliant Go sample under `.goast/testdata/`
+— a policy that never fires and a policy that fires on everything look identical
+if you only test one side — then declare a case for each:
+
+```toml
+# .goast.toml (repo root)
+[test]
+policy = ".goast"                 # default policy for every case; string or array
+
+[[test.cases]]
+name   = "forbids fmt.Println"
+source = ".goast/testdata/no_println_bad.go"
+expect = "fail"                   # "pass" = 0 violations, "fail" = >0
+count  = 1                        # optional: exact violation count
+
+[[test.cases]]
+name   = "allows the compliant sample"
+source = ".goast/testdata/no_println_good.go"
+expect = "pass"
+
+[[test.cases]]
+name   = "reports the exact line and message"
+policy = ".goast/no_println.rego" # optional per-case override of [test].policy
+source = ".goast/testdata/no_println_bad.go"
+
+  [[test.cases.violations]]       # optional; each entry must match some finding
+  line     = 6                    # every field is optional (line/column/message/severity)
+  message  = "do not use fmt.Println"   # substring match
+  severity = "ERROR"              # case-insensitive
 ```
 
-Both samples are mandatory. `no_println_bad.go` holds the violation (invalid
-Go by your rule); `no_println_good.go` is the compliant counterpart (valid
-Go). Testing only the bad sample cannot catch a rule that fires on everything;
-testing only the good sample cannot catch a rule that never fires.
+```bash
+goast test                        # reads .goast.toml; non-zero exit if any case fails
+goast test -c policies.toml       # or point at another config
+```
+
+`count` and each `violations` field are optional refinements on top of
+`expect`: omit them to check only pass/fail, add them to pin the exact result.
+Both the bad and good samples are mandatory — testing only the bad sample cannot
+catch a rule that fires on everything; testing only the good sample cannot catch
+a rule that never fires. Per-case `object_depth` / `ignore_auto_generated`
+mirror the matching `eval` flags. (You can still run the underlying checks by
+hand with `goast eval -p .goast .goast/testdata/no_println_bad.go`, but the
+config makes them a repeatable, exit-coded gate.)
 
 **2. Replay the exact input with the opa CLI.** `goast dump` output is
 byte-for-byte the evaluation input, so any node can become a fixture:
@@ -277,6 +312,7 @@ co-locating is safe. Keep the bad/good Go samples for layer 1 under
 loaded as policies). The layout:
 
 ```
+.goast.toml                 # goast test   (declares the layer-1 cases)
 .goast/
     no_println.rego         # goast eval -p .goast ./cmd ./internal
     no_println_test.rego    # opa test -v .goast   (package goast, self-contained)
@@ -305,8 +341,8 @@ Two facts about the exit code decide how you gate a build:
 - A run-time error (unreadable policy, bad path) exits non-zero regardless of
   `--fail`. Every non-zero exit is code `1`; there are no per-cause codes.
 
-A GitHub Actions job that unit-tests the policies (layer 3) and then gates your
-source directories. goast has **no exclude flag** and skips neither `testdata`
+A GitHub Actions job that runs the policy tests (layers 1 and 3) and then gates
+your source directories. goast has **no exclude flag** and skips neither `testdata`
 nor dot-dirs, so lint your source dirs (e.g. `./cmd ./internal`), never the repo
 root, or it will also flag the intentionally-violating fixtures under
 `.goast/testdata/`:
@@ -324,14 +360,18 @@ jobs:
         with:
           go-version: stable
 
-      # 1. Unit-test the policies
+      - run: go install github.com/m-mizutani/goast/cmd/goast@v0.2.0   # pin a released tag
+
+      # 1. End-to-end policy tests (bad/good samples via .goast.toml)
+      - run: goast test
+
+      # 2. Unit-test the policies
       - uses: open-policy-agent/setup-opa@v2
         with:
           version: latest
       - run: opa test -v .goast
 
-      # 2. Lint your source dirs; fail the job on any violation
-      - run: go install github.com/m-mizutani/goast/cmd/goast@v0.2.0   # pin a released tag
+      # 3. Lint your source dirs; fail the job on any violation
       - run: goast eval -p .goast --fail ./cmd ./internal
 ```
 
@@ -394,5 +434,6 @@ Before shipping a policy, verify:
       `input.Node.Body != null`, never bare `input.Node.Body` or
       `not input.Node.Doc`.
 - [ ] Tested with **both** a violating and a compliant sample file
-      (`.goast/testdata/*_bad.go` and `.goast/testdata/*_good.go`), plus an `opa test` unit
-      test asserting `msg`/`pos`/`sev`.
+      (`.goast/testdata/*_bad.go` and `.goast/testdata/*_good.go`) — declared as
+      `goast test` cases in `.goast.toml` — plus an `opa test` unit test asserting
+      `msg`/`pos`/`sev`.
