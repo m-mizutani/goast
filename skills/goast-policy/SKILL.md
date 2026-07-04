@@ -188,32 +188,36 @@ at each path.
 
 **7. Run against the real tree.** Once the rule works, keep it in your
 project's `.goast/` policy directory (layout under *Verifying and testing
-policies* below) and run goast over the whole tree:
+policies* below) and run goast over your source directories:
 
 ```bash
-goast eval -p .goast ./...        # directories are walked recursively
-goast eval -p .goast --fail .     # non-zero exit on violations (CI gate)
-goast eval -p .goast -f json .    # rdjson (reviewdog Diagnostic Format)
-goast eval -p .goast --ignore-auto-generated .   # skip "Code generated" files
+goast eval -p .goast ./cmd ./internal            # walk these dirs recursively
+goast eval -p .goast --fail ./cmd ./internal     # non-zero exit on violations (CI gate)
+goast eval -p .goast -f json ./cmd ./internal    # rdjson (reviewdog Diagnostic Format)
+goast eval -p .goast --ignore-auto-generated ./cmd ./internal   # skip "Code generated" files
 ```
 
-`--policy` (`-p`) is required and may be repeated; `--format` (`-f`) accepts
-only `text` (default) or `json`. See the **Wiring into CI** section for making
-this a required check.
+goast takes filesystem paths (not Go's `./...` package pattern) and walks each
+recursively for `*.go`. It has **no exclude flag** and skips neither `testdata`
+nor dot-dirs, so a repo-root target (`.`) also lints the intentionally-
+violating fixtures under `.goast/testdata/` — pass your source directories
+instead. `--policy` (`-p`) is required and may be repeated; `--format` (`-f`)
+accepts only `text` (default) or `json`. See the **Wiring into CI** section for
+making this a required check.
 
 ## Verifying and testing policies
 
 Three layers, cheapest first. Use all three for policies that will gate CI.
 
 **1. End-to-end check with sample files.** Keep a known-violating and a
-known-compliant Go sample under `testdata/` and run both — a policy that
+known-compliant Go sample under `.goast/testdata/` and run both — a policy that
 never fires and a policy that fires on everything look identical if you only
 test one side:
 
 ```bash
-goast eval -p .goast testdata/no_println_bad.go    # expect: Detected N violations
-goast eval -p .goast testdata/no_println_good.go   # expect: Detected 0 violations
-goast eval -p .goast --fail testdata/no_println_bad.go || echo "exit code is non-zero as expected"
+goast eval -p .goast .goast/testdata/no_println_bad.go    # expect: Detected N violations
+goast eval -p .goast .goast/testdata/no_println_good.go   # expect: Detected 0 violations
+goast eval -p .goast --fail .goast/testdata/no_println_bad.go || echo "exit code is non-zero as expected"
 ```
 
 Both samples are mandatory. `no_println_bad.go` holds the violation (invalid
@@ -225,8 +229,8 @@ testing only the good sample cannot catch a rule that never fires.
 byte-for-byte the evaluation input, so any node can become a fixture:
 
 ```bash
-goast dump --line 6 testdata/no_println_bad.go > testdata/println_node.json
-opa eval -b .goast -I 'data.goast.fail' < testdata/println_node.json
+goast dump --line 6 .goast/testdata/no_println_bad.go > .goast/testdata/println_node.json
+opa eval -b .goast -I 'data.goast.fail' < .goast/testdata/println_node.json
 ```
 
 **3. Unit tests with `opa test`.** Write `test_*` rules in `package goast`
@@ -271,7 +275,7 @@ loaded as policies). The layout:
 
 ```
 .goast/
-    no_println.rego         # goast eval -p .goast ./...
+    no_println.rego         # goast eval -p .goast ./cmd ./internal
     no_println_test.rego    # opa test -v .goast   (package goast, self-contained)
     testdata/
         no_println_bad.go   # invalid go — layer-1 sample (violates)
@@ -287,7 +291,7 @@ count-only tests and surface as findings pointing at the wrong line.
 goast is a single Go binary. Install it — pin a tag so CI is reproducible:
 
 ```bash
-go install github.com/m-mizutani/goast/cmd/goast@latest   # or @v1.2.3
+go install github.com/m-mizutani/goast/cmd/goast@latest   # or a pinned tag, e.g. @v0.2.0
 ```
 
 Two facts about the exit code decide how you gate a build:
@@ -298,8 +302,11 @@ Two facts about the exit code decide how you gate a build:
 - A run-time error (unreadable policy, bad path) exits non-zero regardless of
   `--fail`. Every non-zero exit is code `1`; there are no per-cause codes.
 
-A GitHub Actions job that unit-tests the policies (layer 3) and then gates the
-tree:
+A GitHub Actions job that unit-tests the policies (layer 3) and then gates your
+source directories. goast has **no exclude flag** and skips neither `testdata`
+nor dot-dirs, so lint your source dirs (e.g. `./cmd ./internal`), never the repo
+root, or it will also flag the intentionally-violating fixtures under
+`.goast/testdata/`:
 
 ```yaml
 name: goast
@@ -320,9 +327,9 @@ jobs:
           version: latest
       - run: opa test -v .goast
 
-      # 2. Lint the tree; fail the job on any violation
-      - run: go install github.com/m-mizutani/goast/cmd/goast@latest
-      - run: goast eval -p .goast --fail ./...
+      # 2. Lint your source dirs; fail the job on any violation
+      - run: go install github.com/m-mizutani/goast/cmd/goast@v0.2.0   # pin a released tag
+      - run: goast eval -p .goast --fail ./cmd ./internal
 ```
 
 **Inline PR comments via reviewdog (optional).** `-f json` writes the reviewdog
@@ -331,7 +338,7 @@ reviewdog — it just emits the byte-compatible shape — so pipe it straight in
 (drop `--fail` and let reviewdog own the reporting):
 
 ```bash
-goast eval -p .goast -f json ./... | reviewdog -f=rdjson -reporter=github-pr-review
+goast eval -p .goast -f json ./cmd ./internal | reviewdog -f=rdjson -reporter=github-pr-review
 ```
 
 ## Common recipes
@@ -384,5 +391,5 @@ Before shipping a policy, verify:
       `input.Node.Body != null`, never bare `input.Node.Body` or
       `not input.Node.Doc`.
 - [ ] Tested with **both** a violating and a compliant sample file
-      (`testdata/*_bad.go` and `testdata/*_good.go`), plus an `opa test` unit
+      (`.goast/testdata/*_bad.go` and `.goast/testdata/*_good.go`), plus an `opa test` unit
       test asserting `msg`/`pos`/`sev`.
