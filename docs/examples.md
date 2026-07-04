@@ -134,8 +134,11 @@ fail contains res if {
 
 ## 4. Context first
 
-**Convention.** Every exported function takes `context.Context` as its first
-argument, so cancellation and request scope thread through the whole call graph.
+**Convention.** Every exported package-level function takes `context.Context` as
+its first argument, so cancellation and request scope thread through the whole
+call graph. Methods are excluded, because a method that implements a standard
+interface (`fmt.Stringer`'s `String()`, `error`'s `Error()`) cannot add a
+`context.Context` parameter.
 
 ```go
 // bad
@@ -155,6 +158,7 @@ exempt_funcs := {"main", "init"}
 
 fail contains res if {
 	input.Kind == "FuncDecl"
+	input.Node.Recv == null                       # package-level functions only (exclude methods)
 	regex.match(`^[A-Z]`, input.Node.Name.Name)   # exported names only
 	not input.Node.Name.Name in exempt_funcs
 	not endswith(input.FileName, "_test.go")
@@ -175,8 +179,9 @@ first_param_is_context if {
 }
 ```
 
-Check `input.Node.Recv` to target only methods (or only plain functions), or
-`input.Node.Type.Results` for return-type rules.
+The `Recv == null` guard restricts the rule to plain functions; drop it to
+include methods too, or invert it (`input.Node.Recv != null`) to target only
+methods. Check `input.Node.Type.Results` for return-type rules.
 
 ## 5. Forbid import
 

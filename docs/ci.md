@@ -84,12 +84,15 @@ unnoticed. This is exactly how goast lints itself — see
 
 `goast eval -f json` writes the [reviewdog Diagnostic Format](https://github.com/reviewdog/reviewdog/tree/master/proto/rdf#rdjson)
 (rdjson) to stdout. goast has **no runtime dependency** on reviewdog — it just
-emits the byte-compatible shape — so pipe it straight in. Drop `--fail` and let
-reviewdog own the reporting and the pass/fail decision:
+emits the byte-compatible shape — so pipe it straight in and let reviewdog own
+the reporting and the pass/fail decision. Pass `--fail=false` explicitly: if
+`fail = true` is committed to `[eval]`, it would otherwise make goast exit
+non-zero, and GitHub Actions runs steps with `pipefail`, so the pipeline would
+fail before reviewdog could report:
 
 ```yaml
       - uses: reviewdog/action-setup@v1
-      - run: goast eval -f json | reviewdog -f=rdjson -reporter=github-pr-review
+      - run: goast eval -f json --fail=false | reviewdog -f=rdjson -reporter=github-pr-review
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
