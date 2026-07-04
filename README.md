@@ -25,8 +25,14 @@ the Go AST, one node at a time.
 
 ## Getting started
 
-Install with `go install` (pre-built binaries for Linux, macOS, and Windows are
-also on each [GitHub Release](https://github.com/m-mizutani/goast/releases)):
+Install with Homebrew:
+
+```bash
+brew install m-mizutani/tap/goast
+```
+
+Or install with `go install` (pre-built binaries for Linux, macOS, and Windows
+are also on each [GitHub Release](https://github.com/m-mizutani/goast/releases)):
 
 ```bash
 go install github.com/m-mizutani/goast/cmd/goast@latest
