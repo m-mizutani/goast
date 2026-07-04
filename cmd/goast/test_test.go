@@ -50,7 +50,9 @@ func TestCheckCase(t *testing.T) {
 		{name: "derived fail from count>0", c: &testCase{Count: ip(2)}, fails: twoViolations, wantPass: true},
 		{name: "derived fail from violations", c: &testCase{Violations: []*expectedViolation{{Line: ip(6)}}}, fails: oneViolation, wantPass: true},
 		{name: "derived pass from count==0", c: &testCase{Count: ip(0)}, fails: nil, wantPass: true},
-		{name: "derived pass from count==0 but a violation exists", c: &testCase{Count: ip(0)}, fails: oneViolation, wantPass: false, wantSubstr: "expected no violations"},
+		// count==0 must not duplicate the "no violations" reason with an "expected
+		// exactly 0" one; the pass/fail branch already covers it.
+		{name: "derived pass from count==0 but a violation exists", c: &testCase{Count: ip(0)}, fails: oneViolation, wantPass: false, wantNReasons: 1, wantSubstr: "expected no violations"},
 
 		// --- count ---
 		{name: "count exact match", c: &testCase{Expect: "fail", Count: ip(2)}, fails: twoViolations, wantPass: true},

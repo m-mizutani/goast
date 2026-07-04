@@ -239,7 +239,10 @@ func checkCase(c *testCase, fails []*goast.Fail) []string {
 		reasons = append(reasons, fmt.Sprintf("expected no violations, but got %d: %s", len(fails), formatFails(fails)))
 	}
 
-	if c.Count != nil && len(fails) != *c.Count {
+	// Only assert an explicit positive count here. count == 0 means "no
+	// violations", which the pass/fail branch above already reports; checking it
+	// again would just duplicate that reason for the same case.
+	if c.Count != nil && *c.Count > 0 && len(fails) != *c.Count {
 		reasons = append(reasons, fmt.Sprintf("expected exactly %d violation(s), but got %d: %s", *c.Count, len(fails), formatFails(fails)))
 	}
 
