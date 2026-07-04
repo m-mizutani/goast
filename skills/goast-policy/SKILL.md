@@ -204,9 +204,33 @@ goast takes filesystem paths (not Go's `./...` package pattern) and walks each
 recursively for `*.go`. It has **no exclude flag** and skips neither `testdata`
 nor dot-dirs, so a repo-root target (`.`) also lints the intentionally-
 violating fixtures under `.goast/testdata/` — pass your source directories
-instead. `--policy` (`-p`) is required and may be repeated; `--format` (`-f`)
-accepts only `text` (default) or `json`. See the **Wiring into CI** section for
-making this a required check.
+instead. `--policy` (`-p`) may be repeated; `--format` (`-f`) accepts only
+`text` (default) or `json`. See the **Wiring into CI** section for making this a
+required check.
+
+Rather than passing flags every time, put an `[eval]` section in `.goast.toml`
+at the repo root (the same file `goast test` uses) and run a bare `goast eval`:
+
+```toml
+[eval]
+policy = [".goast"]                # policy file(s)/dir(s); always an array
+paths  = ["./cmd", "./internal"]   # evaluation targets when no arguments are given
+fail   = true                      # non-zero exit on any violation (CI gate)
+# format = "json"                  # "text" (default) or "json"
+# output = "goast.rdjson"          # omit for stdout (no "-" sentinel in config)
+# ignore_auto_generated = true
+```
+
+```bash
+goast eval                         # policy + targets from [eval]
+goast eval -f json ./cmd           # CLI flags/args override the config
+```
+
+Precedence is **CLI > `[eval]` > built-in default**, so committed defaults stay
+overridable. `--policy` is therefore only required when neither the flag nor
+`[eval].policy` supplies one. Point at another config with `--config, -c` or
+`GOAST_CONFIG`. A missing default `.goast.toml` is fine (eval runs from flags
+alone); an explicitly named `--config` that does not exist is an error.
 
 ## Verifying and testing policies
 
@@ -225,23 +249,23 @@ if you only test one side — then declare a case for each:
 ```toml
 # .goast.toml (repo root)
 [test]
-policy = ".goast"                 # default policy for every case; string or array
+policy = [".goast"]               # default policy for every case; always an array
 
 [[test.cases]]
 name   = "forbids fmt.Println"
-source = ".goast/testdata/no_println_bad.go"
+source = [".goast/testdata/no_println_bad.go"]
 expect = "fail"                   # "pass" = 0 violations, "fail" = >0
 count  = 1                        # optional: exact violation count
 
 [[test.cases]]
 name   = "allows the compliant sample"
-source = ".goast/testdata/no_println_good.go"
+source = [".goast/testdata/no_println_good.go"]
 expect = "pass"
 
 [[test.cases]]
 name   = "reports the exact line and message"
-policy = ".goast/no_println.rego" # optional per-case override of [test].policy
-source = ".goast/testdata/no_println_bad.go"
+policy = [".goast/no_println.rego"] # optional per-case override of [test].policy
+source = [".goast/testdata/no_println_bad.go"]
 
   [[test.cases.violations]]       # optional; each entry must match some finding
   line     = 6                    # every field is optional (line/column/message/severity)
@@ -373,7 +397,8 @@ jobs:
           version: latest
       - run: opa test -v .goast
 
-      # 3. Lint your source dirs; fail the job on any violation
+      # 3. Lint your source dirs; fail the job on any violation.
+      #    With policy/paths/fail set in [eval], this is just `goast eval`.
       - run: goast eval -p .goast --fail ./cmd ./internal
 ```
 

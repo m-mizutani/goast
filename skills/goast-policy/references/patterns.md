@@ -275,8 +275,8 @@ fail contains res if {
 ```
 
 Generated files are better excluded with `goast eval --ignore-auto-generated`
-than in the policy, but a `Path`-based guard works when only some rules
-should skip them.
+(or `ignore_auto_generated = true` under `[eval]` in `.goast.toml`) than in the
+policy, but a `Path`-based guard works when only some rules should skip them.
 
 ## 9. Comment / doc rules
 
