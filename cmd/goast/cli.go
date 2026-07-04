@@ -25,7 +25,8 @@ func run(args []string) error {
 	)
 
 	cmd := &cli.Command{
-		Name: "goast",
+		Name:    "goast",
+		Version: version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "log-level",

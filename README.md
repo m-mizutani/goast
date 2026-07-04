@@ -24,6 +24,8 @@ There are a lot of static analysis tools for Go language. They inspect Go source
 $ go install github.com/m-mizutani/goast/cmd/goast@latest
 ```
 
+Pre-built binaries for Linux, macOS and Windows (amd64/arm64) are also attached to each [GitHub Release](https://github.com/m-mizutani/goast/releases).
+
 ### Dump source code to confirm AST
 
 `dump` subcommand output AST as JSON format. `--line` can specify line number and `--func` can specify function name for dump.

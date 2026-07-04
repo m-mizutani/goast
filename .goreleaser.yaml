@@ -1,0 +1,57 @@
+# See https://goreleaser.com for documentation.
+version: 2
+
+project_name: goast
+
+before:
+  hooks:
+    # Use "download" rather than "tidy": tidy would rewrite go.mod/go.sum and
+    # leave the tree dirty, which makes `goreleaser release` abort on its
+    # clean-state check.
+    - go mod download
+    # Collect the license texts of every dependency so they can be bundled into
+    # each release archive. Pinned for reproducibility.
+    - go run github.com/google/go-licenses@v1.6.0 save ./cmd/goast --save_path=./licenses --force
+
+builds:
+  - main: ./cmd/goast
+    binary: goast
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - licenses/**/*
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: m-mizutani
+    name: goast
